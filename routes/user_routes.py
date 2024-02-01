@@ -22,6 +22,7 @@ def create_user():
     name = str(data.get('name'))
     username = str(data.get('username'))
     phone = str(data.get('phone'))
+    print(name, username, phone)
     if not data or 'name' not in data or 'username' not in data or 'phone' not in data:
         return jsonify({'message': 'Incomplete data provided'}), 400
     

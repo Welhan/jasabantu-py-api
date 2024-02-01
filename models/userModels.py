@@ -1,9 +1,11 @@
 from database import mysql
+from datetime import datetime
+
 
 class User:        
     def create_user(self, name, username, phone):
         cur = mysql.connection.cursor()
-        cur.execute("INSERT INTO user (Name, Username, Phone) VALUES (%s, %s, %s, %s)", (name, username, phone))
+        cur.execute("INSERT INTO user (Name, Username, Phone, CreatedDate) VALUES (%s, %s, %s, %s)", (name, username, phone, datetime.now()))
         mysql.connection.commit()
         cur.close()
 
@@ -23,7 +25,7 @@ class User:
 
     def delete_user(self, user_id):
         cur = mysql.connection.cursor()
-        cur.execute("UPDATE user SET ActiveStatus = ? WHERE id = %s", (0, user_id,))
+        cur.execute("UPDATE user SET ActiveStatus = %s, UpdatedDate = %s WHERE ID = %s", (0, datetime.now(), user_id,))
         mysql.connection.commit()
         cur.close()
 
