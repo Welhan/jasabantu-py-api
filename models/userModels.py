@@ -3,7 +3,7 @@ from database import mysql
 class User:        
     def create_user(self, name, username, phone):
         cur = mysql.connection.cursor()
-        cur.execute("INSERT INTO user (Name, Username, Phone, Active) VALUES (%s, %s, %s, %s)", (name, username, phone))
+        cur.execute("INSERT INTO user (Name, Username, Phone) VALUES (%s, %s, %s, %s)", (name, username, phone))
         mysql.connection.commit()
         cur.close()
 
