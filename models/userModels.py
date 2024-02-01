@@ -23,7 +23,7 @@ class User:
 
     def delete_user(self, user_id):
         cur = mysql.connection.cursor()
-        cur.execute("DELETE FROM user WHERE id = %s", (user_id,))
+        cur.execute("UPDATE user SET ActiveStatus = ? WHERE id = %s", (0, user_id,))
         mysql.connection.commit()
         cur.close()
 
