@@ -39,4 +39,4 @@ def delete_user(user_id):
     if user:
         user_model.delete_user(user_id)
         return jsonify({'message': 'User deleted successfully'})
-    return jsonify({'message': 'User not found'}), 404
+    return jsonify({'message': 'User not found'}), 303
