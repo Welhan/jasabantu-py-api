@@ -25,8 +25,6 @@ def create_user():
     active = data.get('active')
 
     checkUsername = user_model.checkUsername(username)
-    
-    # return jsonify({"message" : checkUsername}), 200
 
     if checkUsername is None:
         user_model.create_user(name, username, phone,active)
