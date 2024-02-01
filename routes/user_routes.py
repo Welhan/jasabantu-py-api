@@ -20,14 +20,17 @@ def get_user(user_id):
 def create_user():
     data = request.get_json()
     name = str(data.get('name'))
-    username = str (data.get('username'))
+    username = str(data.get('username'))
     phone = str(data.get('phone'))
-    active = data.get('active')
-
+    if not data or 'name' not in data or 'username' not in data or 'phone' not in data:
+        return jsonify({'message': 'Incomplete data provided'}), 400
+    
+    if not phone:
+        return jsonify({'message': 'Phone is Required'}), 303
     checkUsername = user_model.checkUsername(username)
 
     if checkUsername is None:
-        user_model.create_user(name, username, phone,active)
+        user_model.create_user(name, username, phone)
         return jsonify({'message': 'User created successfully'}), 201
     else:
         return jsonify({'message': 'User Already Registered'}), 303
