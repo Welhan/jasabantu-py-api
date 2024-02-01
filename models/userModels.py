@@ -38,7 +38,7 @@ class User:
 
     def checkPhoneRegistered(self, phone):
         cur = mysql.connection.cursor()
-        cur.execute('SELECT Phone FROM user WHERE Phone ="%s"', (phone))
+        cur.execute('SELECT Phone FROM user WHERE Phone = %s', (phone,))
         user = cur.fetchone()
         cur.close()
         return user
