@@ -4,6 +4,7 @@ from models.otpModels import Otp
 import random
 from config.constants import WA_ENGINE
 import requests
+import time
 
 user_bp = Blueprint('user_bp', __name__)
 user_model = User()
@@ -50,13 +51,46 @@ def create_user():
                 "recipient" : phone
             }
 
+            checkOtpPhone = otp_model.check_phone_exist(phone)
+
+            if checkOtpPhone is not None:
+                count = int(checkOtpPhone[1])
+                if count + 1 >= 6:
+                    delay = 86400
+                else:
+                    if count + 1 >= 5 :
+                        delay = (count * 3600) - 5
+                    else:
+                        delay = (count * 300) - 5
+
+                if delay > 86400: #jika sudah menjadi 1 hari, kembali menjadi 5 detik
+                    delay = 5
+
+            else:
+                count = 0
+                delay = 5
+
+            time.sleep(5)
+
+            if checkOtpPhone is None:
+                otp_model.create_otp(phone, otp, count + 1)
+            else:
+                otp_model.update_otp(phone, otp, count + 1)
+
+            return jsonify({"message" : "OTP berhasil dikirim", "nextDelay" : delay}), 200
+
             response = requests.post(WA_ENGINE, data=data)
 
             # Memeriksa status respons
             if response.status_code == 200:
                 # Data diterima dalam format JSON
                 data = response.json()
-                otp_model.create_otp(phone, otp)
+                
+                if checkOtpPhone is None:
+                    otp_model.create_otp(phone, otp, count + 1)
+                else:
+                    otp_model.update_otp(phone, otp, count + 1)
+
                 message = data["message"]
                 new_message = message.replace("@c.us", "")
                 return jsonify({"message" : new_message}), 200
@@ -64,8 +98,6 @@ def create_user():
                 # Menampilkan pesan kesalahan jika permintaan tidak berhasil
                 # return jsonify({"message" : })
                 print("Failed to fetch data from API:", response.status_code)
-
-           
         else:
             return jsonify({'message': 'Phone Already Registered'}), 303 
     else:
