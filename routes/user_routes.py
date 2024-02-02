@@ -2,6 +2,8 @@ from flask import Blueprint, jsonify, request
 from models.userModels import User
 from models.otpModels import Otp
 import random
+from config.constants import WA_ENGINE
+import requests
 
 user_bp = Blueprint('user_bp', __name__)
 user_model = User()
@@ -42,8 +44,28 @@ def create_user():
         if checkPhone is None:
             otp = generate_otp()
             # user_model.create_user(name, username, phone)
-            otp_model.create_otp(phone, otp)
-            return jsonify({'otp': otp, 'message' : 'OTP Berhasil Digenerate'}), 200
+
+            data = {
+                "message" : "*" +str(otp)+"* adalah kode OTP untuk registrasi akun anda. Harap tidak membagikan atau memberitahukan kode ini kepada siapapun.",
+                "recipient" : phone
+            }
+
+            response = requests.post(WA_ENGINE, data=data)
+
+            # Memeriksa status respons
+            if response.status_code == 200:
+                # Data diterima dalam format JSON
+                data = response.json()
+                otp_model.create_otp(phone, otp)
+                message = data["message"]
+                new_message = message.replace("@c.us", "")
+                return jsonify({"message" : new_message}), 200
+            else:
+                # Menampilkan pesan kesalahan jika permintaan tidak berhasil
+                # return jsonify({"message" : })
+                print("Failed to fetch data from API:", response.status_code)
+
+           
         else:
             return jsonify({'message': 'Phone Already Registered'}), 303 
     else:
