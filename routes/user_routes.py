@@ -35,9 +35,6 @@ def create_user():
     if not data or 'name' not in data or 'username' not in data or 'phone' not in data:
         return jsonify({'message': 'Incomplete data provided'}), 400
     
-    if not phone:
-        return jsonify({'message': 'Phone is Required'}), 303
-    
     checkUsername = user_model.checkUsername(username)
 
     if checkUsername is None:
@@ -103,6 +100,29 @@ def create_user():
     else:
         return jsonify({'message': 'User Already Registered'}), 303
     
+@user_bp.route('/users/otp', methods=['POST'])
+def verifyOtp():
+    data = request.get_json()
+    name = str(data.get('name'))
+    username = str(data.get('username'))
+    phone = str(data.get('phone'))
+    otp = str(data.get('otp'))
+
+    if not data or 'name' not in data or 'username' not in data or 'phone' not in data or 'otp' not in data:
+        return jsonify({'message': 'Access Denied'}), 400
+    
+    getOtp = otp_model.check_otp(phone,otp)
+    if getOtp is not None:
+        checkUsername = user_model.checkUsername(username)
+        checkPhone = user_model.checkPhoneRegistered(phone)
+        if checkUsername is None and checkPhone is None:
+            user_model.create_user(name,username,phone)
+            otp_model.delete_otp(phone)
+            return jsonify({'message': 'Berhasil Melakukan Registrasi'}), 200
+        else:
+            return jsonify({'message': 'User atau Phone sudah terdaftar'}), 303
+    else:
+        return jsonify({'message': 'Kode OTP tidak sesuai'}), 303
 
 @user_bp.route('/users/<int:user_id>', methods=['DELETE'])
 def delete_user(user_id):

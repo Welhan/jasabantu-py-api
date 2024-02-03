@@ -21,16 +21,26 @@ class Otp:
         mysql.connection.commit()
         cur.close()
 
-    def check_phone_exist(self, phone):
+    def check_phone_exist(self, phone, otp = 0):
         cur = mysql.connection.cursor()
-        cur.execute("SELECT ID, Counter, RequestDate FROM otp_request WHERE Phone = %s ", (phone,))
+        if otp :
+            cur.execute("SELECT ID, Counter, RequestDate FROM otp_request WHERE Phone = %s AND Otp = %s", (phone, otp,))
+        else:
+            cur.execute("SELECT ID, Counter, RequestDate FROM otp_request WHERE Phone = %s ", (phone,))
         check = cur.fetchone()
         cur.close()
         return check
 
     def check_otp(self, phone, otp):
         cur = mysql.connection.cursor()
-        cur.execute("SELECT ID, RequestDate FROM otp_request WHERE Phone = %s AND Otp = %s", (phone, otp,))
+        cur.execute("SELECT ID FROM otp_request WHERE Phone = %s AND Otp = %s", (phone, otp,))
         check = cur.fetchone()
         cur.close()
         return check
+    
+    def delete_otp (self, phone):
+        cur = mysql.connection.cursor()
+        query = "DELETE FROM {} WHERE Phone = %s".format(self.OTP_REQUEST_TABLE)
+        cur.execute(query, (phone,))
+        mysql.connection.commit()
+        cur.close()
