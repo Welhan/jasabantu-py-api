@@ -41,7 +41,8 @@ def create_user():
     if checkUsername is None:
         checkPhone = user_model.checkPhoneRegistered(phone)
         if checkPhone is None:
-            otp = bcrypt.hashpw(generate_otp(),bcrypt.gensalt())
+            # otp = bcrypt.hashpw(generate_otp(),bcrypt.gensalt())
+            otp = generate_otp()
             # user_model.create_user(name, username, phone)
 
             data = {
@@ -114,7 +115,8 @@ def verifyOtp():
     
     getOtp = otp_model.check_otp(phone)
     if getOtp is not None:
-        if bcrypt.checkpw(otp, getOtp[1]):
+        # if bcrypt.checkpw(otp, getOtp[1]):
+        if otp == getOtp[1]:
             checkUsername = user_model.checkUsername(username)
             checkPhone = user_model.checkPhoneRegistered(phone)
             if checkUsername is None and checkPhone is None:

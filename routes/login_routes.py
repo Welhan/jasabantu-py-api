@@ -1,10 +1,10 @@
 from flask import Blueprint, jsonify, request
 from models.userModels import User
 
-register_bp = Blueprint('register_bp', __name__)
+login_bp = Blueprint('login_bp', __name__)
 user_model = User()
 
-@register_bp.route('/registerByPhone', method=['POST'])
+@login_bp.route('/loginByPhone', methods=['POST'])
 def registser():
     data = request.get_json()
     phone = data.get('phone')
