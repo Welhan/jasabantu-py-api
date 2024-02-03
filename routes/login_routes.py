@@ -4,7 +4,7 @@ from models.userModels import User
 login_bp = Blueprint('login_bp', __name__)
 user_model = User()
 
-@login_bp.route('/loginByPhone', methodss=['POST'])
+@login_bp.route('/loginByPhone', methods=['POST'])
 def registser():
     data = request.get_json()
     phone = data.get('phone')
