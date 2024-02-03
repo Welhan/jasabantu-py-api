@@ -5,6 +5,7 @@ import random
 from config.constants import WA_ENGINE
 import requests
 import time
+import bcrypt
 
 user_bp = Blueprint('user_bp', __name__)
 user_model = User()
@@ -40,7 +41,7 @@ def create_user():
     if checkUsername is None:
         checkPhone = user_model.checkPhoneRegistered(phone)
         if checkPhone is None:
-            otp = generate_otp()
+            otp = bcrypt.hashpw(generate_otp(),bcrypt.gensalt())
             # user_model.create_user(name, username, phone)
 
             data = {
@@ -67,7 +68,7 @@ def create_user():
                 count = 0
                 delay = 5
 
-            time.sleep(5)
+            # time.sleep(5)
 
             if checkOtpPhone is None:
                 otp_model.create_otp(phone, otp, count + 1)
@@ -111,16 +112,19 @@ def verifyOtp():
     if not data or 'name' not in data or 'username' not in data or 'phone' not in data or 'otp' not in data:
         return jsonify({'message': 'Access Denied'}), 400
     
-    getOtp = otp_model.check_otp(phone,otp)
+    getOtp = otp_model.check_otp(phone)
     if getOtp is not None:
-        checkUsername = user_model.checkUsername(username)
-        checkPhone = user_model.checkPhoneRegistered(phone)
-        if checkUsername is None and checkPhone is None:
-            user_model.create_user(name,username,phone)
-            otp_model.delete_otp(phone)
-            return jsonify({'message': 'Berhasil Melakukan Registrasi'}), 200
+        if bcrypt.checkpw(otp, getOtp[1]):
+            checkUsername = user_model.checkUsername(username)
+            checkPhone = user_model.checkPhoneRegistered(phone)
+            if checkUsername is None and checkPhone is None:
+                user_model.create_user(name,username,phone)
+                otp_model.delete_otp(phone)
+                return jsonify({'message': 'Berhasil melakukan registrasi'}), 200
+            else:
+                return jsonify({'message': 'User atau Phone sudah terdaftar'}), 303
         else:
-            return jsonify({'message': 'User atau Phone sudah terdaftar'}), 303
+            return jsonify({'message': 'Kode OTP tidak sesuai'}), 303
     else:
         return jsonify({'message': 'Kode OTP tidak sesuai'}), 303
 

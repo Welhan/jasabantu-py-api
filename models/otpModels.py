@@ -31,9 +31,9 @@ class Otp:
         cur.close()
         return check
 
-    def check_otp(self, phone, otp):
+    def check_otp(self, phone):
         cur = mysql.connection.cursor()
-        cur.execute("SELECT ID FROM otp_request WHERE Phone = %s AND Otp = %s", (phone, otp,))
+        cur.execute("SELECT ID FROM otp_request WHERE Phone = %s", (phone, ))
         check = cur.fetchone()
         cur.close()
         return check
