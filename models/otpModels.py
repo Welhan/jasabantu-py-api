@@ -45,6 +45,15 @@ class Otp:
         cur.close()
         return check
     
+
+    def checkOtp(self, otp):
+        conn = create_connection()
+        cur = conn.cursor()        
+        cur.execute("SELECT ID FROM otp_request WHERE Otp = %s", (otp,))
+        check = cur.fetchone()
+        cur.close()
+        return check
+    
     def delete_otp (self, phone):
         conn = create_connection()
         cur = conn.cursor()        
