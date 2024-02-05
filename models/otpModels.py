@@ -1,6 +1,5 @@
 from database import mysql
 from datetime import datetime
-import pytz
 from config.constants import zona_waktu
 
 from config.config import create_connection
@@ -43,8 +42,7 @@ class Otp:
         cur.execute("SELECT ID FROM otp_request WHERE Phone = %s", (phone,))
         check = cur.fetchone()
         cur.close()
-        return check
-    
+        return check    
 
     def checkOtp(self, otp):
         conn = create_connection()
