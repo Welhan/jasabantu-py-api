@@ -8,6 +8,7 @@ user_model = User()
 def registser():
     data = request.get_json()
     phone = data.get('phone')
+    pin = data.get('pin')
 
     if phone is None:
         return jsonify({'message': 'Phone is Required'}), 404

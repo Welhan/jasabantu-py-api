@@ -26,14 +26,13 @@ def get_user(user_id):
         return jsonify({'user': user})
     return jsonify({'message': 'User not found'}), 404
 
-@user_bp.route('/users', methods=['POST'])
+@user_bp.route('/new_users', methods=['POST'])
 def create_user():
     data = request.get_json()
-    name = str(data.get('name'))
     username = str(data.get('username'))
     phone = str(data.get('phone'))
 
-    if not data or 'name' not in data or 'username' not in data or 'phone' not in data:
+    if not data or 'username' not in data or 'phone' not in data:
         return jsonify({'message': 'Incomplete data provided'}), 400
     
     checkUsername = user_model.checkUsername(username)
@@ -129,6 +128,23 @@ def verifyOtp():
             return jsonify({'message': 'Kode OTP tidak sesuai'}), 303
     else:
         return jsonify({'message': 'Kode OTP tidak sesuai'}), 303
+
+# Untuk Update PIN
+@user_bp.route('/users/update_pin', methods=['POST'])
+def pin_update():
+    data = request.get_json()
+    username = str(data.get('username'))
+    phone = str(data.get('phone'))
+
+    if not data or 'username' not in data or 'phone' not in data:
+        return jsonify({'message': 'Access Denied'}), 400
+    
+    checkUsername = user_model.checkUsername(username)
+
+    if checkUsername is None:
+        return jsonify({'message': 'Access Denied'}), 400
+    
+    
 
 @user_bp.route('/users/<int:user_id>', methods=['DELETE'])
 def delete_user(user_id):
