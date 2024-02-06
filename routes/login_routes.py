@@ -2,8 +2,6 @@ from flask import Blueprint, jsonify, request
 from models.userModels import User
 from models.otpModels import Otp
 import random
-
-
 from helpers.helpers import checkPin, generate_otp, checkOtp
 
 
