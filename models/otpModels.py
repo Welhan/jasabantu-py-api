@@ -39,7 +39,7 @@ class Otp:
     def check_otp(self, phone):
         conn = create_connection()
         cur = conn.cursor()        
-        cur.execute("SELECT ID FROM otp_request WHERE Phone = %s", (phone,))
+        cur.execute("SELECT ID, Otp FROM otp_request WHERE Phone = %s", (phone,))
         check = cur.fetchone()
         cur.close()
         return check    

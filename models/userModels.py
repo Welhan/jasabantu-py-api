@@ -6,11 +6,11 @@ from config.config import create_connection_admin
 
 class User:        
     USER_REQUEST_TABLE = "user"
-    def create_user(self, name, username, phone):
+    def create_user_by_phone(self, phone):
         conn = create_connection()
         cur = conn.cursor()
-        query = "INSERT INTO {} (Name, Username, Phone, CreatedDate) VALUES (%s, %s, %s, %s)".format(self.USER_REQUEST_TABLE)
-        cur.execute(query, (name, username, phone, datetime.now()))
+        query = "INSERT INTO {} (Phone, CreatedDate) VALUES (%s, %s)".format(self.USER_REQUEST_TABLE)
+        cur.execute(query, (phone, datetime.now()))
         conn.commit()
         cur.close()
         if cur.rowcount == 1:
@@ -18,11 +18,40 @@ class User:
         else:
             return 0
         
-    def updateUniqueID(self, uniqueid, phone):
+    def create_user_by_email(self, email):
         conn = create_connection()
         cur = conn.cursor()
-        query = "UPDATE {} SET UniqueID = %s WHERE Phone = %s".format(self.USER_REQUEST_TABLE)
-        cur.execute(query, (uniqueid, phone))
+        query = "INSERT INTO {} (Email, CreatedDate) VALUES (%s, %s)".format(self.USER_REQUEST_TABLE)
+        cur.execute(query, (email, datetime.now()))
+        conn.commit()
+        cur.close()
+        if cur.rowcount == 1:
+            return cur.lastrowid
+        else:
+            return 0
+    
+    def setProfile(self, uniqueid, name):
+        conn = create_connection()
+        cur = conn.cursor()
+        query = "UPDATE {} SET Name = %s WHERE UniqueID = %s".format(self.USER_REQUEST_TABLE)
+        cur.execute(query, (name, uniqueid))
+        conn.commit()
+        cur.close()
+        if cur.rowcount == 1:
+            return True
+        else:
+            return False
+        
+    def updateUniqueID(self, uniqueid, phone = '', email = ''):
+        conn = create_connection()
+        cur = conn.cursor()
+        if phone :
+            query = "UPDATE {} SET UniqueID = %s WHERE Phone = %s".format(self.USER_REQUEST_TABLE)
+            val = (uniqueid, phone)
+        else:
+            query = "UPDATE {} SET UniqueID = %s WHERE Email = %s".format(self.USER_REQUEST_TABLE)
+            val = (uniqueid, email)
+        cur.execute(query, val)
         conn.commit()
         cur.close()
 
@@ -88,7 +117,6 @@ class User:
         cur.close()
         return user
     
-
     def getUserByUniqueID(self, uniqueid):
         conn = create_connection()
         cur = conn.cursor()
@@ -97,6 +125,7 @@ class User:
         user = cur.fetchone()
         cur.close()
         return user
+
     
     # def saveProfile(self, username, address):
     #     conn = create_connection()
@@ -109,7 +138,16 @@ class User:
     def updatePin(self, uniqueID, pin):
         conn = create_connection()
         cur = conn.cursor()
-        query = "UPDATE {} Set Pin = %s WHERE UniqueID = %s".format(self.USER_REQUEST_TABLE)
+        query = "UPDATE {} SET Pin = %s WHERE UniqueID = %s".format(self.USER_REQUEST_TABLE)
         cur.execute(query, (pin, uniqueID))
         conn.commit()
         cur.close()
+
+    def getUserByEmail(self, email):
+        conn = create_connection()
+        cur = conn.cursor()
+        query = "SELECT * FROM {} WHERE Email = %s".format(self.USER_REQUEST_TABLE)
+        cur.execute(query, (email,))
+        user = cur.fetchone()
+        cur.close()
+        return user
