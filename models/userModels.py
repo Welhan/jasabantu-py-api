@@ -1,44 +1,162 @@
 from database import mysql
 from datetime import datetime
 
+from config.config import create_connection
+from config.config import create_connection_admin
 
 class User:        
-    def create_user(self, name, username, phone):
-        cur = mysql.connection.cursor()
-        cur.execute("INSERT INTO user (Name, Username, Phone, CreatedDate) VALUES (%s, %s, %s, %s)", (name, username, phone, datetime.now()))
-        mysql.connection.commit()
+    USER_REQUEST_TABLE = "user"
+    def create_user_by_phone(self, phone):
+        conn = create_connection()
+        cur = conn.cursor()
+        query = "INSERT INTO {} (Phone, CreatedDate) VALUES (%s, %s)".format(self.USER_REQUEST_TABLE)
+        cur.execute(query, (phone, datetime.now()))
+        conn.commit()
+        cur.close()
+        if cur.rowcount == 1:
+            return cur.lastrowid
+        else:
+            return 0
+        
+    def create_user_by_email(self, email):
+        conn = create_connection()
+        cur = conn.cursor()
+        query = "INSERT INTO {} (Email, CreatedDate) VALUES (%s, %s)".format(self.USER_REQUEST_TABLE)
+        cur.execute(query, (email, datetime.now()))
+        conn.commit()
+        cur.close()
+        if cur.rowcount == 1:
+            return cur.lastrowid
+        else:
+            return 0
+    
+    def setProfile(self, uniqueid, name):
+        conn = create_connection()
+        cur = conn.cursor()
+        query = "UPDATE {} SET Name = %s WHERE UniqueID = %s".format(self.USER_REQUEST_TABLE)
+        cur.execute(query, (name, uniqueid))
+        conn.commit()
+        cur.close()
+        if cur.rowcount == 1:
+            return True
+        else:
+            return False
+        
+    def updateUniqueID(self, uniqueid, phone = '', email = ''):
+        conn = create_connection()
+        cur = conn.cursor()
+        if phone :
+            query = "UPDATE {} SET UniqueID = %s WHERE Phone = %s".format(self.USER_REQUEST_TABLE)
+            val = (uniqueid, phone)
+        else:
+            query = "UPDATE {} SET UniqueID = %s WHERE Email = %s".format(self.USER_REQUEST_TABLE)
+            val = (uniqueid, email)
+        cur.execute(query, val)
+        conn.commit()
         cur.close()
 
     def get_users(self):
-        cur = mysql.connection.cursor()
-        cur.execute("SELECT * FROM user")
+        conn = create_connection()
+        cur = conn.cursor()
+        query = "SELECT * FROM {}".format(self.USER_REQUEST_TABLE)
+        cur.execute(query)
         users = cur.fetchall()
         cur.close()
         return users
 
     def get_user_by_id(self, user_id):
-        cur = mysql.connection.cursor()
-        cur.execute("SELECT * FROM user WHERE id = %s", (user_id,))
+        conn = create_connection()
+        cur = conn.cursor()
+        query = "SELECT * FROM {} WHERE id = %s".format(self.USER_REQUEST_TABLE)
+        cur.execute(query, (user_id,))
         user = cur.fetchone()
         cur.close()
         return user
 
     def delete_user(self, user_id):
-        cur = mysql.connection.cursor()
-        cur.execute("UPDATE user SET ActiveStatus = %s, UpdatedDate = %s WHERE ID = %s", (0, datetime.now(), user_id,))
-        mysql.connection.commit()
+        conn = create_connection()
+        cur = conn.cursor()
+        query = "UPDATE {} SET ActiveStatus = %s, UpdatedDate = %s WHERE ID = %s".format(self.USER_REQUEST_TABLE)
+        cur.execute(query, (0, datetime.now(), user_id,))
+        conn.commit()
         cur.close()
 
     def checkUsername(self, username):
-        cur = mysql.connection.cursor()
-        cur.execute("SELECT ID FROM user WHERE Username = %s", (username,))
+        conn = create_connection()
+        cur = conn.cursor()
+        query = "SELECT ID FROM {} WHERE Username = %s".format(self.USER_REQUEST_TABLE)
+        cur.execute(query, (username,))
         user = cur.fetchone()
         cur.close()
         return user
 
     def checkPhoneRegistered(self, phone):
-        cur = mysql.connection.cursor()
-        cur.execute('SELECT Phone FROM user WHERE Phone = %s', (phone,))
+        conn = create_connection()
+        cur = conn.cursor()
+        query = "SELECT Phone FROM {} WHERE Phone = %s".format(self.USER_REQUEST_TABLE)
+        cur.execute(query, (phone,))
         user = cur.fetchone()
         cur.close()
         return user
+    
+    def checkPin(self, phone):
+        conn = create_connection()
+        cur = conn.cursor()
+        query = "SELECT Phone FROM {} WHERE Phone = %s".format(self.USER_REQUEST_TABLE)
+        cur.execute(query, (phone,))
+        user = cur.fetchone()
+        cur.close()
+        return user
+    
+    def getUserByPhone(self, phone):
+        conn = create_connection()
+        cur = conn.cursor()
+        query = "SELECT * FROM {} WHERE Phone = %s".format(self.USER_REQUEST_TABLE)
+        cur.execute(query, (phone,))
+        user = cur.fetchone()
+        cur.close()
+        return user
+    
+    def getUserByUniqueID(self, uniqueid):
+        conn = create_connection()
+        cur = conn.cursor()
+        query = "SELECT * FROM {} WHERE UniqueID = %s".format(self.USER_REQUEST_TABLE)
+        cur.execute(query, (uniqueid,))
+        user = cur.fetchone()
+        cur.close()
+        return user
+
+    
+    # def saveProfile(self, username, address):
+    #     conn = create_connection()
+    #     cur = conn.cursor()
+    #     cur.execute('SELECT Phone FROM user WHERE Phone = %s', (phone,))
+    #     user = cur.fetchone()
+    #     cur.close()
+    #     return user
+
+    def updatePin(self, uniqueID, pin):
+        conn = create_connection()
+        cur = conn.cursor()
+        query = "UPDATE {} SET Pin = %s WHERE UniqueID = %s".format(self.USER_REQUEST_TABLE)
+        cur.execute(query, (pin, uniqueID))
+        conn.commit()
+        cur.close()
+
+    def getUserByEmail(self, email):
+        conn = create_connection()
+        cur = conn.cursor()
+        query = "SELECT * FROM {} WHERE Email = %s".format(self.USER_REQUEST_TABLE)
+        cur.execute(query, (email,))
+        user = cur.fetchone()
+        cur.close()
+        return user
+    
+    def getLastUniqueID(self):
+        conn = create_connection()
+        cur = conn.cursor()
+        query = "SELECT ID, UniqueID FROM {} ORDER BY ID DESC LIMIT 1".format(self.USER_REQUEST_TABLE)
+        cur.execute(query)
+        uniqueid = cur.fetchone()
+        cur.close
+        return uniqueid
