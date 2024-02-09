@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 from models.userModels import User
 from models.otpModels import Otp
 from models.authModels import Auth
+from models.mitraModels import Mitra
 import random
 import bcrypt
 import requests
@@ -15,6 +16,7 @@ from config.constants import WA_ENGINE, SECRET_KEY, SALT_KEY
 user_model = User()
 otp_model = Otp()
 auth_model = Auth()
+mitra_model = Mitra()
 
 def generate_otp(phone, type):
     otp = str(random.randint(100000,999999))
@@ -102,3 +104,20 @@ def insert_oauth(uniqueID, token, addr = ""):
         return True
     
     return False
+
+def generate_uniqueid():
+    user = user_model.getLastUniqueID()
+    mitra = mitra_model.getLastUniqueID()
+    user = str(user[1])
+    mitra = str(mitra[1])
+    user = int(user[5:])
+    mitra = int(mitra[5:])
+    UniqueID = str(random.randint(10000,99999))
+    if user > mitra:
+        return UniqueID + str(user + 1)
+    elif user < mitra:
+        return UniqueID + str(mitra + 1)
+    elif user == mitra:
+        return UniqueID + str(user + 1)
+
+    

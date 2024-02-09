@@ -3,7 +3,7 @@ from models.userModels import User
 from models.otpModels import Otp
 import random
 from config.constants import WA_ENGINE, SECRET_KEY, SALT_KEY
-from helpers.helpers import checkPin, generate_otp, checkOtp, generate_token, insert_oauth
+from helpers.helpers import checkPin, generate_otp, checkOtp, generate_token, insert_oauth, generate_uniqueid
 from cryptography.fernet import Fernet
 import json
 
@@ -23,25 +23,29 @@ otp_model = Otp()
 @user_bp.route('/users', methods=['GET'])
 def get_users():
     number_to_encrypt = 256490
-    # Ubah angka menjadi string sebelum dienkripsi
     data_to_encrypt = str(number_to_encrypt)
-    
     key = b'01020304050607080910111213141516'
     key = base64.urlsafe_b64encode(key)
-
     print("New key:", key)
     cipher_suite = Fernet(key)
-    
-    # Lakukan enkripsi angka
     encrypted_data = cipher_suite.encrypt(data_to_encrypt.encode())
-    
-    # Buat objek JSON yang sesuai
     response = {
-        "data" : encrypted_data.decode()  # Mengubah bytes menjadi string
+        "data" : encrypted_data.decode()
     }
-    
-    # Mengembalikan response dalam bentuk JSON
     return json.dumps(response), 200
+
+
+@user_bp.route('/getUniqueID', methods=['GET'])
+def getUniqueID():
+    data = {
+        "UniqueID" : generate_uniqueid()
+    }
+    response = {
+        "status": "success",
+        "data" : data
+    }
+    return jsonify(response), 200
+
 @user_bp.route('/users/<int:user_id>', methods=['GET'])
 def get_user(user_id):
     user = user_model.get_user_by_id(user_id)
@@ -98,11 +102,9 @@ def verifyOtp():
         if(otp is True):
             checkPhone = user_model.checkPhoneRegistered(phone)
             if checkPhone is None:
-                createUser = user_model.create_user_by_phone(phone)
                 # otp_model.delete_otp(phone)
-                UniqueID = str(random.randint(10000,99999)) + str(createUser)
+                UniqueID = generate_uniqueid()
                 user_model.updateUniqueID(UniqueID, phone)
-                
                 token = generate_token(UniqueID)
 
                 insert_oauth(UniqueID,token, "")
@@ -211,4 +213,6 @@ def delete_user(user_id):
         user_model.delete_user(user_id)
         return jsonify({"status" : "success","message": "Menghapus pengguna berhasil"})
     return jsonify({"status" : "failed","message": "Pengguna tidak ditemukan"}), 303
+
+
 

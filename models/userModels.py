@@ -151,3 +151,12 @@ class User:
         user = cur.fetchone()
         cur.close()
         return user
+    
+    def getLastUniqueID(self):
+        conn = create_connection()
+        cur = conn.cursor()
+        query = "SELECT ID, UniqueID FROM {} ORDER BY ID DESC LIMIT 1".format(self.USER_REQUEST_TABLE)
+        cur.execute(query)
+        uniqueid = cur.fetchone()
+        cur.close
+        return uniqueid

@@ -21,7 +21,7 @@ def create_connection_admin():
         host="localhost",
         user="root",
         password="",
-        database="jasabantu-admin"
+        database="jasabantu_mitra"
     )
     return conn
 
