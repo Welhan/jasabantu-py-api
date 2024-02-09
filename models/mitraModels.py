@@ -1,7 +1,6 @@
 from database import mysql
 from datetime import datetime
 
-from config.config import create_connection
 from config.config import create_connection_admin
 
 class Mitra:        
