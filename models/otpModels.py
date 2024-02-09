@@ -3,7 +3,6 @@ from datetime import datetime
 from config.constants import zona_waktu
 
 from config.config import create_connection
-from config.config import create_connection_admin
 
 class Otp:
     OTP_REQUEST_TABLE = "otp_request"

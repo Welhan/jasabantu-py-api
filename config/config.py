@@ -24,3 +24,12 @@ def create_connection_admin():
         database="jasabantu-admin"
     )
     return conn
+
+def create_connection_auth():
+    conn = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="",
+        database="jasabantu-oauth"
+    )
+    return conn

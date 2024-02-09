@@ -1,10 +1,12 @@
 from flask import Blueprint, jsonify, request
 from models.userModels import User
 from models.otpModels import Otp
+from models.authModels import Auth
 import random
 import bcrypt
 import requests
 import time
+import jwt
 
 from config.constants import WA_ENGINE, SECRET_KEY, SALT_KEY
 
@@ -12,9 +14,10 @@ from config.constants import WA_ENGINE, SECRET_KEY, SALT_KEY
 
 user_model = User()
 otp_model = Otp()
+auth_model = Auth()
 
 def generate_otp(phone, type):
-    otp = str(random.randint(1000,9999))
+    otp = str(random.randint(100000,999999))
     data = {
             "message" : "*" +str(otp)+"* adalah kode OTP untuk pendaftaran akun anda. Mohon untuk tidak membagikan atau memberitahukan kode ini kepada siapapun.",
             "recipient" : phone
@@ -39,15 +42,17 @@ def generate_otp(phone, type):
         delay = 5
 
     time.sleep(2)
+    
+    otp = bcrypt.hashpw(otp.encode('utf-8'), SALT_KEY)
     if(type == 'WA'):
         response = requests.post(WA_ENGINE, data=data)
         if response.status_code == 200:
             data = response.json()
             
             if checkOtpPhone is None:
-                otp_model.create_otp(phone, bcrypt.hashpw(otp.encode('utf-8'), SALT_KEY), count + 1)
+                otp_model.create_otp(phone, otp, count + 1)
             else:
-                otp_model.update_otp(phone, bcrypt.hashpw(otp.encode('utf-8'), SALT_KEY), count + 1)
+                otp_model.update_otp(phone, otp, count + 1)
             return True
         else:
             return False
@@ -56,9 +61,9 @@ def generate_otp(phone, type):
         if response.status_code == 200:
             data = response.json()
             if checkOtpPhone is None:
-                otp_model.create_otp(phone, bcrypt.hashpw(otp.encode('utf-8'), SALT_KEY), count + 1)
+                otp_model.create_otp(phone, otp, count + 1)
             else:
-                otp_model.update_otp(phone, bcrypt.hashpw(otp.encode('utf-8'), SALT_KEY), count + 1)
+                otp_model.update_otp(phone, otp, count + 1)
             return True
         else:
             return False
@@ -81,9 +86,19 @@ def checkPin(phone = '', email='', uniqueid ='', pin=''):
        result = user_model.getUserByUniqueID(uniqueid)[4]
     else:
         return False
-    if(pin == result):
+    if bcrypt.checkpw(pin.encode('utf-8'), result.encode('utf-8')):
         return True
     else:
         return False
     
+def generate_token(UniqueID):
+    payload = {'uniqueID' : UniqueID}
+    return jwt.encode(payload, SECRET_KEY,algorithm='HS256')
+
+def insert_oauth(uniqueID, token, addr = ""):
+    insert = auth_model.new_login(uniqueID, token, addr)
+
+    if insert > 1:
+        return True
     
+    return False
