@@ -8,10 +8,7 @@ import bcrypt
 import requests
 import time
 import jwt
-
 from config.constants import WA_ENGINE, SECRET_KEY, SALT_KEY
-
-
 
 user_model = User()
 otp_model = Otp()
@@ -108,16 +105,19 @@ def insert_oauth(uniqueID, token, addr = ""):
 def generate_uniqueid():
     user = user_model.getLastUniqueID()
     mitra = mitra_model.getLastUniqueID()
+    UniqueID = str(random.randint(10000,99999))
+
+    if user is None and mitra is None:
+        return UniqueID + str(1)
+
     user = str(user[1])
     mitra = str(mitra[1])
     user = int(user[5:])
     mitra = int(mitra[5:])
-    UniqueID = str(random.randint(10000,99999))
+    
     if user > mitra:
         return UniqueID + str(user + 1)
     elif user < mitra:
         return UniqueID + str(mitra + 1)
-    elif user == mitra:
-        return UniqueID + str(user + 1)
 
     
