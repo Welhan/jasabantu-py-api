@@ -6,11 +6,11 @@ from config.config import create_connection_admin
 
 class User:        
     USER_REQUEST_TABLE = "user"
-    def create_user_by_phone(self, phone):
+    def create_user_by_phone(self, phone, uniqueID):
         conn = create_connection()
         cur = conn.cursor()
-        query = "INSERT INTO {} (Phone, CreatedDate) VALUES (%s, %s)".format(self.USER_REQUEST_TABLE)
-        cur.execute(query, (phone, datetime.now()))
+        query = "INSERT INTO {} (Phone, UniqueID, CreatedDate) VALUES (%s, %s, %s)".format(self.USER_REQUEST_TABLE)
+        cur.execute(query, (phone, uniqueID, datetime.now()))
         conn.commit()
         cur.close()
         if cur.rowcount == 1:

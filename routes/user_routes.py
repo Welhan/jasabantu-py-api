@@ -102,9 +102,9 @@ def verifyOtp():
         if(otp is True):
             checkPhone = user_model.checkPhoneRegistered(phone)
             if checkPhone is None:
-                # otp_model.delete_otp(phone)
+                otp_model.delete_otp(phone)
                 UniqueID = generate_uniqueid()
-                user_model.updateUniqueID(UniqueID, phone)
+                user_model.create_user_by_phone(phone, UniqueID)
                 token = generate_token(UniqueID)
 
                 insert_oauth(UniqueID,token, "")

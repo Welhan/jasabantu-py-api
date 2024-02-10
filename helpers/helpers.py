@@ -109,11 +109,18 @@ def generate_uniqueid():
 
     if user is None and mitra is None:
         return UniqueID + str(1)
+    
+    if user is None:
+        user = 0
+    else:
+        user = str(user[1])
+        user = int(user[5:])
 
-    user = str(user[1])
-    mitra = str(mitra[1])
-    user = int(user[5:])
-    mitra = int(mitra[5:])
+    if mitra is None:
+        mitra = 0
+    else:
+        mitra = str(mitra[1])
+        mitra =  int(mitra[5:])
     
     if user > mitra:
         return UniqueID + str(user + 1)
