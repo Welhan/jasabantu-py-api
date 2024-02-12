@@ -23,6 +23,6 @@ def create_connection_auth():
         host="localhost",
         user="root",
         password="",
-        database="jasabantu-oauth"
+        database="jasabantu_oauth"
     )
     return conn

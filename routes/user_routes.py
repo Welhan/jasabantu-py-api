@@ -19,58 +19,29 @@ user_bp = Blueprint('user_bp', __name__)
 user_model = User()
 otp_model = Otp()
 mitra_model = Mitra()
-# key = b'010203'  # Ganti your_key_here dengan kunci Anda
-    # key = Fernet.generate_key()
 
-@user_bp.route('/users', methods=['GET'])
-def get_users():
-    number_to_encrypt = 256490
-    data_to_encrypt = str(number_to_encrypt)
-    key = b'01020304050607080910111213141516'
-    key = base64.urlsafe_b64encode(key)
-    print("New key:", key)
-    cipher_suite = Fernet(key)
-    encrypted_data = cipher_suite.encrypt(data_to_encrypt.encode())
-    response = {
-        "data" : encrypted_data.decode()
-    }
-    return json.dumps(response), 200
+@user_bp.route('/getUser', methods=['GET'])
+def getUser():
+    getUser = user_model.get_users()
 
-@user_bp.route('/checkEmailMitra', methods=['POST'])
-def checkEmailMitra():
-    data = request.get_json()
-    email = data.get('email')
-
-    if not data and 'email' not in data:
-        return jsonify({"status" : "failed","message": "Registrasi admin gagal!"}), 400
-    
-    checkMitra = mitra_model.getMitraLogin(email)
-
-    if checkMitra is None:
-        return jsonify({"status":'success','message': 'Email tersedia!'}), 303
+    if not getUser:
+        return jsonify({"status": 'success', 'data': []}), 200
     else:
-        return jsonify({"status":'failed','message': 'Email tidak tersedia!'}), 303
-    
-    
-@user_bp.route('/registerMitra', methods=['POST'])
-def registerMitra():
-    data = request.get_json()
-    nama = data.get('nama')
-    email = data.get('email')
-    password = str(data.get('password'))
+        data = []
+        for row in getUser:
+            row_dict = {
+                "UniqueID": row[1],
+                "Name": row[2],
+                "Email": row[7],
+                "Phone": row[7],
+            }
+            data.append(row_dict)
 
-    if not data and 'nama' not in data and 'email' not in data and 'password' not in data:
-        return jsonify({"status" : "failed","message": "Registrasi admin gagal!"}), 400
-    
-    UniqueID = generate_uniqueid()
-    
-    checkMitra = mitra_model.registerMitra(UniqueID, nama, email, password)
-
-    if checkMitra is None:
-        return jsonify({"status":'success','message': 'Email tersedia!'}), 303
-    else:
-        return jsonify({"status":'failed','message': 'Email tidak tersedia!'}), 303
-
+        response = {
+            "status": "success",
+            "data": data
+        }
+        return jsonify(response), 200
 
 @user_bp.route('/getUniqueID', methods=['GET'])
 def getUniqueID():
