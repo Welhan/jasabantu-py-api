@@ -1,19 +1,34 @@
-from database import mysql
-from datetime import datetime
-
+from config.config import create_connection
 from config.config import create_connection_admin
 
 class Mitra:        
     MITRA_REQUEST_TABLE = "user"
 
-    def registerMitra(self,UniqueID, nama, email, pin):
+    def getMitra(self):
         conn = create_connection_admin()
         cur = conn.cursor()
-        query = "INSERT INTO {} (Nama, Email, Pin, )".format(self.MITRA_REQUEST_TABLE)
-        cur.execute(query, (UniqueID,))
-        mitra = cur.fetchone()
+        query = "SELECT * FROM {}".format(self.MITRA_REQUEST_TABLE)
+        cur.execute(query)
+        mitra = cur.fetchall()
         cur.close
         return mitra
+    
+    def registerMitra(self, UniqueID='', nama='', email='', phone=''):
+        conn = create_connection_admin()
+        cur = conn.cursor()
+        query = "INSERT INTO {} (UniqueID, Name, Email, Phone) VALUES (%s,%s,%s,%s)".format(self.MITRA_REQUEST_TABLE)
+        try:
+            cur.execute(query, (UniqueID, nama, email, phone,))
+            conn.commit()
+            cur.close()
+            conn.close()
+            return True
+        except Exception as e:
+            print("Error:", e)
+            cur.close()
+            conn.close()
+            return False
+
     
     def getMitraLogin(self, email = '', phone = ''):
         conn = create_connection_admin()
@@ -21,14 +36,31 @@ class Mitra:
         if(email) :
             query = "SELECT Email, Pin FROM {} WHERE 1 = 1".format(self.MITRA_REQUEST_TABLE)
             query += " AND Email = %s"
-            cur.execute(query, (email,))
+            try:
+                cur.execute(query, (email,))
+                mitra = cur.fetchone()
+                cur.close
+                return mitra
+            except Exception as e:
+                print("Error:", e)
+                cur.close()
+                conn.close()
+                return False
+            
         if(phone) : 
             query = "SELECT Phone, Pin FROM {} WHERE 1 = 1".format(self.MITRA_REQUEST_TABLE)
             query += " AND Phone = %s"
-            cur.execute(query, (phone,))
-        mitra = cur.fetchone()
-        cur.close
-        return mitra
+            try:
+                cur.execute(query, (phone,))
+                mitra = cur.fetchone()
+                cur.close
+                return mitra
+            except Exception as e:
+                print("Error:", e)
+                cur.close()
+                conn.close()
+                return False
+        
     
 
     def getLastUniqueID(self):

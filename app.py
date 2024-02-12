@@ -1,9 +1,11 @@
 from flask import Flask
 from routes.user_routes import user_bp
 from routes.login_routes import login_bp
+from routes.mitra_routes import mitra_bp
 from database import app
 
 app.register_blueprint(user_bp, url_prefix='/api')
+app.register_blueprint(mitra_bp, url_prefix='/api')
 app.register_blueprint(login_bp)
 
 if __name__ == '__main__':
