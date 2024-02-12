@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 from models.userModels import User
 from models.otpModels import Otp
+from models.mitraModels import Mitra
 import random
 from config.constants import WA_ENGINE, SECRET_KEY, SALT_KEY
 from helpers.helpers import checkPin, generate_otp, checkOtp, generate_token, insert_oauth, generate_uniqueid
@@ -17,6 +18,7 @@ import base64
 user_bp = Blueprint('user_bp', __name__)
 user_model = User()
 otp_model = Otp()
+mitra_model = Mitra()
 # key = b'010203'  # Ganti your_key_here dengan kunci Anda
     # key = Fernet.generate_key()
 
@@ -33,6 +35,41 @@ def get_users():
         "data" : encrypted_data.decode()
     }
     return json.dumps(response), 200
+
+@user_bp.route('/checkEmailMitra', methods=['POST'])
+def checkEmailMitra():
+    data = request.get_json()
+    email = data.get('email')
+
+    if not data and 'email' not in data:
+        return jsonify({"status" : "failed","message": "Registrasi admin gagal!"}), 400
+    
+    checkMitra = mitra_model.getMitraLogin(email)
+
+    if checkMitra is None:
+        return jsonify({"status":'success','message': 'Email tersedia!'}), 303
+    else:
+        return jsonify({"status":'failed','message': 'Email tidak tersedia!'}), 303
+    
+    
+@user_bp.route('/registerMitra', methods=['POST'])
+def registerMitra():
+    data = request.get_json()
+    nama = data.get('nama')
+    email = data.get('email')
+    password = str(data.get('password'))
+
+    if not data and 'nama' not in data and 'email' not in data and 'password' not in data:
+        return jsonify({"status" : "failed","message": "Registrasi admin gagal!"}), 400
+    
+    UniqueID = generate_uniqueid()
+    
+    checkMitra = mitra_model.registerMitra(UniqueID, nama, email, password)
+
+    if checkMitra is None:
+        return jsonify({"status":'success','message': 'Email tersedia!'}), 303
+    else:
+        return jsonify({"status":'failed','message': 'Email tidak tersedia!'}), 303
 
 
 @user_bp.route('/getUniqueID', methods=['GET'])
