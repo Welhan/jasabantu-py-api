@@ -249,22 +249,29 @@ def set_profile():
 # Untuk Set PIN
 @user_bp.route('/users/set_pin', methods=['POST'])
 def set_pin():
-    data = request.get_json()
-    uniqueid = data.get('uniqueid')
-    pin = str(data.get('pin'))
+    auth = request.authorization
 
-    if not data or 'uniqueid' not in data or 'pin' not in data:
+    if not auth or not auth.token:
+        return jsonify({'message': 'Akses ditolak'}), 400
+
+    result = generate_decode(auth.token)
+
+    result = result.split(':')
+    if len(result) != 2:
+        return jsonify({'message': 'Akses ditolak'}), 400
+
+    uniqueid = generate_decode(result[0])
+    pin = result[1]
+    
+    if len(pin) != 6 or not pin.isdigit():
         return jsonify({"status" : "failed","message": "Akses ditolak"}), 400
     
-    if len(pin) != 60:
-        return jsonify({"status" : "failed","message": "Akses ditolak"}), 400
     checkUser = user_model.getUserByUniqueID(uniqueid)
     if len(checkUser) == 0:
         return jsonify({"status" : "failed","message": "PIN gagal disimpan"}), 400
     else:
-        user_model.updatePin(uniqueid, pin)
+        user_model.updatePin(uniqueid, bcrypt.hashpw(pin.encode('utf-8'), SALT_KEY))
         return jsonify({"status" : "success","message": "PIN berhasil disimpan"}), 200    
-
 
 # Untuk Update PIN
 @user_bp.route('/users/update_pin', methods=['POST'])
