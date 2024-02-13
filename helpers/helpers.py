@@ -8,7 +8,7 @@ import bcrypt
 import requests
 import time
 import jwt
-from config.constants import WA_ENGINE, SECRET_KEY, SALT_KEY
+from config.constants import WA_ENGINE, SECRET_KEY, SALT_KEY, ROT_KEY, ROT_NUM
 
 user_model = User()
 otp_model = Otp()
@@ -127,4 +127,25 @@ def generate_uniqueid():
     elif user < mitra:
         return UniqueID + str(mitra + 1)
 
-    
+def rot(text):
+    result = ''
+    for char in text:
+        if char in ROT_KEY:
+            new_char = ROT_KEY[(ROT_KEY.index(char) + ROT_NUM) % len(ROT_KEY)]
+        else:
+            result += char
+        result += new_char
+    return result
+
+def unrot(text):
+    result = ''
+    for char in text:
+        if char in ROT_KEY: 
+            new_char = ROT_KEY[(ROT_KEY.index(char) - ROT_NUM) % len(ROT_KEY)]
+        else:
+            new_char = char  
+        result += new_char  
+    return result
+
+
+

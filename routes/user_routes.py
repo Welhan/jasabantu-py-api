@@ -4,10 +4,8 @@ from models.otpModels import Otp
 from models.mitraModels import Mitra
 import random
 from config.constants import WA_ENGINE, SECRET_KEY, SALT_KEY
-from helpers.helpers import checkPin, generate_otp, checkOtp, generate_token, insert_oauth, generate_uniqueid
-from cryptography.fernet import Fernet
+from helpers.helpers import checkPin, generate_otp, checkOtp, generate_token, insert_oauth, generate_uniqueid, rot, unrot
 import json
-
 import jwt
 import requests
 import time
@@ -20,8 +18,44 @@ user_model = User()
 otp_model = Otp()
 mitra_model = Mitra()
 
+@user_bp.route('/user_token', methods = ['POST'])
+def user_token():
+    auth = request.authorization
+
+    if not auth or not auth.token:
+        return jsonify({'message': 'Invalid credentials'}), 401
+    
+    token = base64.b64decode(auth.token).decode()  
+
+    result = token. split(':')
+
+    data = {
+        "uniqueID" : result[0],
+        'name' : result[1],
+        'phone' : result[2]
+    }
+
+    
+    return jsonify({"status": 'success', 'data': data}), 200
+
+    
 @user_bp.route('/getUser', methods=['GET'])
 def getUser():
+    uniqueID = 123451
+    name = "Welhan"
+    phone = "6281296023051"
+
+    hasil = str(uniqueID) + ":" + name + ":" + phone
+    result1 = rot(hasil)
+    # print(result1)
+    result2 = unrot(rot)
+    # print(result2)
+    hasil = base64.b64encode(hasil.encode('utf-8'))
+    # print(hasil.decode('utf-8'))
+    
+    # base64.b64encode('123451:Welhan:{}'.format(phone_number).encode('utf-8')).decode('utf-8')
+    # print(base64.b64decode(hasil).decode('utf-8'))
+    
     getUser = user_model.get_users()
 
     if not getUser:
@@ -43,6 +77,7 @@ def getUser():
         }
         return jsonify(response), 200
 
+
 @user_bp.route('/getUniqueID', methods=['GET'])
 def getUniqueID():
     data = {
@@ -54,13 +89,13 @@ def getUniqueID():
     }
     return jsonify(response), 200
 
-@user_bp.route('/users/<int:user_id>', methods=['GET'])
-def get_user(user_id):
-    user = user_model.get_user_by_id(user_id)
+@user_bp.route('/users/<string:phone>', methods=['GET'])
+def get_user(phone):
+    user = user_model.getUserByPhone(phone)
     if user:
         return jsonify({'user': user})
     return jsonify({"status" : "failed",'message': 'Pengguna tidak ditemukan'}), 404
-
+    
 @user_bp.route('/check_phone', methods=['POST'])
 def check_phone():
     data = request.get_json()
@@ -76,6 +111,48 @@ def check_phone():
     else:
         return jsonify({"status" : "failed","message": "No.HP sudah terdaftar, silahkan login atau gunakan No.HP lain."}), 303 
     
+@user_bp.route('/checkROT', methods=['POST'])
+def checkROT():
+    data = request.get_json()
+    uniqueID = 123451
+    name = "Welhan"
+    phone = "6281296023051"
+
+    hasil = str(uniqueID) + ":" + name + ":" + phone
+    rotprocess = rot(hasil)
+    unrotprocess = unrot(rotprocess)
+    print(rotprocess, unrotprocess)
+    # result1 = base64.b64encode(rotprocess.encode()).decode()
+    # result2 = base64.b64encode(unrotprocess.encode()).decode()
+    # print(result1, result2)
+    # response = {
+    #     "1": hasil,
+    #     "2": result1,
+    #     "3": result2
+    # }
+    # print (response)
+    # return jsonify(response), 200
+
+
+@user_bp.route('/test_rot', methods=['POST'])
+def test_rot():
+    data = request.get_json()
+    phone = str(data.get('phone'))
+    otp = str(data.get('otp'))
+
+    if not data or 'phone' not in data and 'otp' not in data:
+        return jsonify({"status" : "failed","message": "Akses ditolak"}), 400
+    res = phone + ":"+ otp
+    rotprocess = rot(res)
+    result = base64.b64encode(rotprocess.encode('utf-8')).decode()
+    response = {
+        "status": "success",
+        "data": result
+    }
+    return jsonify(response), 200
+
+
+    
 @user_bp.route('/new_users', methods=['POST'])
 def create_user():
     data = request.get_json()
@@ -88,6 +165,7 @@ def create_user():
     checkPhone = user_model.checkPhoneRegistered(phone)
     if checkPhone is None:
         otp = generate_otp(phone, type)
+
         if(otp is True):
             return jsonify({"status" : "success","message": "OTP berhasil dikirim"}), 200 
         else:
@@ -98,12 +176,23 @@ def create_user():
 
 @user_bp.route('/users/otp', methods=['POST'])
 def verifyOtp():
-    data = request.get_json()
-    if not data or 'phone' not in data or 'otp' not in data:
+
+    auth = request.authorization
+
+    if not auth or not auth.token:
         return jsonify({'message': 'Akses ditolak'}), 400
     
-    phone = str(data.get('phone'))
-    otp = data.get('otp')
+    token = base64.b64decode(auth.token).decode()
+
+    result = unrot(token)
+    result = result.split(':')
+
+    if len(result) != 2:
+        return jsonify({'message': 'Akses ditolak'}), 400
+    
+    phone = result[0]
+    otp = result[1]
+    
     getOtp = otp_model.check_otp(phone)    
     if getOtp is not None:
         otp = checkOtp(otp, phone)
@@ -115,27 +204,21 @@ def verifyOtp():
                 user_model.create_user_by_phone(phone, UniqueID)
                 token = generate_token(UniqueID)
 
-                insert_oauth(UniqueID,token, "")
+                insert_oauth(UniqueID,token, "") #pisah
+
+                UniqueID = rot(UniqueID)
+
+                result = base64.b64encode(UniqueID.encode('utf-8')).decode()
 
                 data = {
-                    "id" : UniqueID,
+                    "id" : result,
                     "token" : token
                 }
-                # key = Fernet.generate_key()
-                # cipher_suite = Fernet(key)
                 response = {
                     "status": "success",
                     "message": "Kode OTP sesuai",
                     "data": data
                 }
-                # json_data = json.dumps(response)
-                # encrypted_data = cipher_suite.encrypt(json_data.encode())
-                # key_string = key.decode()
-                # encrypted_json = {
-                #     "data": encrypted_data.decode(), 
-                #     "key": key_string
-                # }
-                # encrypted_json_string = json.dumps(encrypted_json)
                 return jsonify(response), 200
             else:
                 UniqueID = user_model.getUserByPhone(phone)[1]

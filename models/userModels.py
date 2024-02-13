@@ -67,7 +67,7 @@ class User:
     def get_user_by_id(self, user_id):
         conn = create_connection()
         cur = conn.cursor()
-        query = "SELECT * FROM {} WHERE id = %s".format(self.USER_REQUEST_TABLE)
+        query = "SELECT * FROM {} WHERE UniqueID = %s".format(self.USER_REQUEST_TABLE)
         cur.execute(query, (user_id,))
         user = cur.fetchone()
         cur.close()
