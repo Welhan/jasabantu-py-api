@@ -225,12 +225,21 @@ def verifyOtp():
 # Untuk Update Nama User Setelah Registrasi
 @user_bp.route('/users/set_profile', methods=['POST'])
 def set_profile():
-    data = request.get_json()
-    uniqueid = str(data.get('uniqueid'))
-    name = str(data.get('name'))
 
-    if not data or 'name' not in data or 'uniqueid' not in data:
-        return jsonify({"message": "Akses ditolak"}), 400
+    auth = request.authorization
+
+    if not auth or not auth.token:
+        return jsonify({'message': 'Akses ditolak'}), 400
+
+    result = generate_decode(auth.token)
+
+    result = result.split(':')
+    if len(result) != 2:
+        return jsonify({'message': 'Akses ditolak'}), 400
+
+    uniqueid = generate_decode(result[0])
+    name = result[1]
+
     setProfile = user_model.setProfile(uniqueid, name)
     if (setProfile is True):
         return jsonify({"status" : "success","message": "Pendaftaran berhasil"}), 200
