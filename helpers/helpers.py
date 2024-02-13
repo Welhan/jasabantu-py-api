@@ -9,6 +9,7 @@ import requests
 import time
 import jwt
 from config.constants import WA_ENGINE, SECRET_KEY, SALT_KEY, ROT_KEY, ROT_NUM
+import base64
 
 user_model = User()
 otp_model = Otp()
@@ -147,5 +148,11 @@ def unrot(text):
         result += new_char  
     return result
 
+def generate_encode(text):
+    result = rot(text)
 
+    return base64.b64encode(result.encode('utf-8')).decode()
 
+def generate_decode(token):
+   result = base64.b64decode(token).decode()
+   return unrot(result)

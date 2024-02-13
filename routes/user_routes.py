@@ -4,7 +4,7 @@ from models.otpModels import Otp
 from models.mitraModels import Mitra
 import random
 from config.constants import WA_ENGINE, SECRET_KEY, SALT_KEY
-from helpers.helpers import checkPin, generate_otp, checkOtp, generate_token, insert_oauth, generate_uniqueid, rot, unrot
+from helpers.helpers import *
 import json
 import jwt
 import requests
@@ -25,7 +25,7 @@ def user_token():
     if not auth or not auth.token:
         return jsonify({'message': 'Invalid credentials'}), 401
     
-    token = base64.b64decode(auth.token).decode()  
+    token = generate_decode(auth.token)
 
     result = token. split(':')
 
@@ -34,28 +34,13 @@ def user_token():
         'name' : result[1],
         'phone' : result[2]
     }
-
     
     return jsonify({"status": 'success', 'data': data}), 200
 
     
 @user_bp.route('/getUser', methods=['GET'])
 def getUser():
-    uniqueID = 123451
-    name = "Welhan"
-    phone = "6281296023051"
-
-    hasil = str(uniqueID) + ":" + name + ":" + phone
-    result1 = rot(hasil)
-    # print(result1)
-    result2 = unrot(rot)
-    # print(result2)
-    hasil = base64.b64encode(hasil.encode('utf-8'))
-    # print(hasil.decode('utf-8'))
-    
-    # base64.b64encode('123451:Welhan:{}'.format(phone_number).encode('utf-8')).decode('utf-8')
-    # print(base64.b64decode(hasil).decode('utf-8'))
-    
+        
     getUser = user_model.get_users()
 
     if not getUser:
@@ -113,7 +98,7 @@ def check_phone():
     
 @user_bp.route('/checkROT', methods=['POST'])
 def checkROT():
-    data = request.get_json()
+    # data = request.get_json()
     uniqueID = 123451
     name = "Welhan"
     phone = "6281296023051"
@@ -122,16 +107,19 @@ def checkROT():
     rotprocess = rot(hasil)
     unrotprocess = unrot(rotprocess)
     print(rotprocess, unrotprocess)
-    # result1 = base64.b64encode(rotprocess.encode()).decode()
-    # result2 = base64.b64encode(unrotprocess.encode()).decode()
-    # print(result1, result2)
-    # response = {
-    #     "1": hasil,
-    #     "2": result1,
-    #     "3": result2
-    # }
-    # print (response)
-    # return jsonify(response), 200
+    result1 = base64.b64encode(rotprocess.encode()).decode()
+    result2 = base64.b64encode(unrotprocess.encode()).decode()
+    result3 = base64.b64decode(result1).decode()
+    result3 = unrot(result3)
+    print(result1, result2)
+    response = {
+        "1": hasil,
+        "2": result1,
+        "3": result2,
+        "4" : result3
+    }
+    print (response)
+    return jsonify(response), 200
 
 
 @user_bp.route('/test_rot', methods=['POST'])
@@ -143,15 +131,13 @@ def test_rot():
     if not data or 'phone' not in data and 'otp' not in data:
         return jsonify({"status" : "failed","message": "Akses ditolak"}), 400
     res = phone + ":"+ otp
-    rotprocess = rot(res)
-    result = base64.b64encode(rotprocess.encode('utf-8')).decode()
+
+    result = generate_encode(res)
     response = {
         "status": "success",
         "data": result
     }
     return jsonify(response), 200
-
-
     
 @user_bp.route('/new_users', methods=['POST'])
 def create_user():
@@ -181,12 +167,10 @@ def verifyOtp():
 
     if not auth or not auth.token:
         return jsonify({'message': 'Akses ditolak'}), 400
-    
-    token = base64.b64decode(auth.token).decode()
 
-    result = unrot(token)
+    result = generate_decode(auth.token)
+
     result = result.split(':')
-
     if len(result) != 2:
         return jsonify({'message': 'Akses ditolak'}), 400
     
