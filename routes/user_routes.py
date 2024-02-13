@@ -190,9 +190,7 @@ def verifyOtp():
 
                 insert_oauth(UniqueID,token, "") #pisah
 
-                UniqueID = rot(UniqueID)
-
-                result = base64.b64encode(UniqueID.encode('utf-8')).decode()
+                result = generate_encode(UniqueID)
 
                 data = {
                     "id" : result,
