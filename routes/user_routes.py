@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, Response, jsonify, request
 from models.userModels import User
 from models.otpModels import Otp
 from models.mitraModels import Mitra
@@ -17,6 +17,7 @@ user_bp = Blueprint('user_bp', __name__)
 user_model = User()
 otp_model = Otp()
 mitra_model = Mitra()
+regis_delimiter = ":"
 
 # Untuk Contoh Auzthorization (nnt hapus)
 @user_bp.route('/user_token', methods = ['POST'])
@@ -32,8 +33,7 @@ def user_token():
 
     data = {
         "uniqueID" : result[0],
-        'name' : result[1],
-        'phone' : result[2]
+        # 'name' : result[1]
     }
     
     return jsonify({"status": 'success', 'data': data}), 200
@@ -123,47 +123,49 @@ def test_rot():
         return jsonify({"status" : "failed","message": "Akses ditolak"}), 400
     res = phone + ":"+ otp
 
+    res = rot(res)
+
     result = generate_encode(res)
+    # result = res
     response = {
         "status": "success",
         "data": result
     }
     return jsonify(response), 200
-    
+
 @user_bp.route('/new_users', methods=['POST'])
 def create_user():
     data = request.get_json()
     phone = str(data.get('phone'))
     type = str(data.get('type'))
     
-    if not data or 'type' not in data or 'phone' not in data:
-        return jsonify({"status" : "failed","message": "Data tidak lengkap"}), 400
+    if not data or 'phone' not in data:
+        return jsonify({"status" : "failed","message": "Data tidak lengkap"}), 202
 
     checkPhone = user_model.checkPhoneRegistered(phone)
     if checkPhone is None:
+        type = "WA" if "type" not in data else type
         otp = generate_otp(phone, type)
 
         if(otp is True):
             return jsonify({"status" : "success","message": "OTP berhasil dikirim"}), 200 
         else:
-            return jsonify({"status" : "failed","message": "OTP gagal dikirim"}), 303 
+            return jsonify({"status" : "failed","message": "OTP gagal dikirim"}), 400 
     else:
-        return jsonify({"status" : "failed","message": "No.HP sudah terdaftar, silahkan login atau gunakan No.HP lain."}), 303 
-
-
+        return jsonify({"status" : "failed","message": "No.HP sudah terdaftar, silahkan login atau gunakan No.HP lain."}), 202
+    
 @user_bp.route('/users/otp', methods=['POST'])
 def verifyOtp():
-
     auth = request.authorization
 
     if not auth or not auth.token:
-        return jsonify({'message': 'Akses ditolak'}), 400
+        return jsonify({"status" : "failed",'message': 'Akses ditolak'}), 400
 
     result = generate_decode(auth.token)
 
     result = result.split(':')
     if len(result) != 2:
-        return jsonify({'message': 'Akses ditolak'}), 400
+        return jsonify({"status" : "failed",'message': 'Akses ditolak'}), 400
     
     phone = result[0]
     otp = result[1]
@@ -183,6 +185,8 @@ def verifyOtp():
 
                 result = generate_encode(UniqueID)
 
+                print(result)
+
                 data = {
                     "id" : result,
                     "token" : token
@@ -194,6 +198,7 @@ def verifyOtp():
                 }
                 return jsonify(response), 200
             else:
+                # verify otp untuk login
                 UniqueID = user_model.getUserByPhone(phone)[1]
                 response = {
                     "status" : "success",
@@ -205,13 +210,13 @@ def verifyOtp():
                     "status" : "failed",
                     "message" : "Kode OTP tidak sesuai"
                 }
-            return jsonify(response), 303
+            return jsonify(response), 400
     else:
         response = {
                     "status" : "failed",
                     "message" : "Kode OTP tidak sesuai"
                 }
-        return jsonify(response), 303
+        return jsonify(response), 400
 
 # Untuk Update Nama User Setelah Registrasi
 @user_bp.route('/users/set_profile', methods=['PUT'])
@@ -229,16 +234,22 @@ def set_profile():
         return jsonify({'message': 'Akses ditolak'}), 400
 
     uniqueid = generate_decode(result[0])
-    name = result[1]
+    # name = result[1]
+
+    data = request.get_json()
+    name = str(data.get('name'))
+
+    if not data or 'name' not in data:
+        return jsonify({"status" : "failed","message": "Data tidak lengkap"}), 202
 
     setProfile = user_model.setProfile(uniqueid, name)
     if (setProfile is True):
         return jsonify({"status" : "success","message": "Pendaftaran berhasil"}), 200
     else:
-        return jsonify({"status" : "failed","message": "Pendaftaran gagal"}), 303
+        return jsonify({"status" : "failed","message": "Pendaftaran gagal"}), 400
 
 # Untuk Set PIN
-@user_bp.route('/users/set_pin', methods=['PUT'])
+@user_bp.route('/users/set_pin', methods=['POST'])
 def set_pin():
     auth = request.authorization
 

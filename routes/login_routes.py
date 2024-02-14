@@ -45,7 +45,9 @@ def mitraLoginByPhone():
 def loginByPhone():
     data = request.get_json()
     phone = data.get('phone')
-    if phone is None:
+    type = str(data.get('type'))
+
+    if not data or 'type' not in data or 'phone' not in data:
         return jsonify({"status":'failed','message': 'No.HP wajib diisi.'}), 404
     
     checkRegisteredPhone = user_model.checkPhoneRegistered(phone)
@@ -53,7 +55,12 @@ def loginByPhone():
     if checkRegisteredPhone is None:
         return jsonify({"status":'failed','message': 'Nomor tidak ditemukan'}), 303
     else:    
-        return jsonify({"status" : "success","message": "Nomor ditemukan"}), 200 
+        otp = generate_otp(phone, type)
+
+        if(otp is True):
+            return jsonify({"status" : "success","message": "OTP berhasil dikirim"}), 200 
+        else:
+            return jsonify({"status" : "failed","message": "OTP gagal dikirim"}), 303 
         
     
 @login_bp.route('/loginPinUser', methods=['POST'])

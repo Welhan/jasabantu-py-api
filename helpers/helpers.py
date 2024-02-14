@@ -100,7 +100,6 @@ def insert_oauth(uniqueID, token, addr = ""):
 
     if insert > 1:
         return True
-    
     return False
 
 def generate_uniqueid():
