@@ -2,15 +2,15 @@ from flask import Blueprint, jsonify, request
 from models.userModels import User
 from models.otpModels import Otp
 from models.mitraModels import Mitra
-import random
 from config.constants import WA_ENGINE, SECRET_KEY, SALT_KEY
 from helpers.helpers import *
-import json
-import jwt
-import requests
-import time
 import bcrypt
 import base64
+# import random
+# import json
+# import jwt
+# import requests
+# import time
 
 
 user_bp = Blueprint('user_bp', __name__)
@@ -18,6 +18,7 @@ user_model = User()
 otp_model = Otp()
 mitra_model = Mitra()
 
+# Untuk Contoh Auzthorization (nnt hapus)
 @user_bp.route('/user_token', methods = ['POST'])
 def user_token():
     auth = request.authorization
@@ -37,10 +38,8 @@ def user_token():
     
     return jsonify({"status": 'success', 'data': data}), 200
 
-    
 @user_bp.route('/getUser', methods=['GET'])
 def getUser():
-        
     getUser = user_model.get_users()
 
     if not getUser:
@@ -62,7 +61,6 @@ def getUser():
         }
         return jsonify(response), 200
 
-
 @user_bp.route('/getUniqueID', methods=['GET'])
 def getUniqueID():
     data = {
@@ -73,19 +71,11 @@ def getUniqueID():
         "data" : data
     }
     return jsonify(response), 200
-
-@user_bp.route('/users/<string:phone>', methods=['GET'])
-def get_user(phone):
-    user = user_model.getUserByPhone(phone)
-    if user:
-        return jsonify({'user': user})
-    return jsonify({"status" : "failed",'message': 'Pengguna tidak ditemukan'}), 404
     
 @user_bp.route('/check_phone', methods=['POST'])
 def check_phone():
     data = request.get_json()
     phone = str(data.get('phone'))
-    print(phone)
     
     if not data or 'phone' not in data:
         return jsonify({"status" : "failed","message": "Data tidak lengkap"}), 400
@@ -95,7 +85,8 @@ def check_phone():
         return jsonify({"status" : "success","message": "Lanjutkan Registrasi"}), 200 
     else:
         return jsonify({"status" : "failed","message": "No.HP sudah terdaftar, silahkan login atau gunakan No.HP lain."}), 303 
-    
+
+# Untuk Contoh ROT 
 @user_bp.route('/checkROT', methods=['POST'])
 def checkROT():
     # data = request.get_json()
@@ -121,7 +112,7 @@ def checkROT():
     print (response)
     return jsonify(response), 200
 
-
+# Keperluan Test ROT dan Encode
 @user_bp.route('/test_rot', methods=['POST'])
 def test_rot():
     data = request.get_json()
@@ -223,7 +214,7 @@ def verifyOtp():
         return jsonify(response), 303
 
 # Untuk Update Nama User Setelah Registrasi
-@user_bp.route('/users/set_profile', methods=['POST'])
+@user_bp.route('/users/set_profile', methods=['PUT'])
 def set_profile():
 
     auth = request.authorization
@@ -247,7 +238,7 @@ def set_profile():
         return jsonify({"status" : "failed","message": "Pendaftaran gagal"}), 303
 
 # Untuk Set PIN
-@user_bp.route('/users/set_pin', methods=['POST'])
+@user_bp.route('/users/set_pin', methods=['PUT'])
 def set_pin():
     auth = request.authorization
 
@@ -274,7 +265,7 @@ def set_pin():
         return jsonify({"status" : "success","message": "PIN berhasil disimpan"}), 200    
 
 # Untuk Update PIN
-@user_bp.route('/users/update_pin', methods=['POST'])
+@user_bp.route('/users/update_pin', methods=['PUT'])
 def update_pin():
     data = request.get_json()
     uniqueid = data.get('uniqueid')
@@ -294,7 +285,7 @@ def update_pin():
         user_model.updatePin(getUser[0], pin)
         return jsonify({"status" : "success","message": "PIN berhasil disimpan"}), 200
             
-
+# Delete User menggunakan Soft Delete
 @user_bp.route('/users/<int:user_id>', methods=['DELETE'])
 def delete_user(user_id):
     user = user_model.get_user_by_id(user_id)
