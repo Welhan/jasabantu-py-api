@@ -4,13 +4,14 @@ from models.otpModels import Otp
 from models.mitraModels import Mitra
 import random
 import bcrypt
-from helpers.helpers import checkPin, generate_otp, checkOtp
+from helpers.helpers import *
 
 
 login_bp = Blueprint('login_bp', __name__)
 user_model = User()
 mitra_model = Mitra()
 otp_model = Otp()
+login_delimiter = ":"
 
 @login_bp.route('/mitraLoginByEmail', methods=['POST'])
 def mitraLoginByEmail():
@@ -41,47 +42,85 @@ def mitraLoginByPhone():
         return jsonify({"status" : "success","message": "Phone ditemukan"}), 200 
     
 
-@login_bp.route('/loginByPhone', methods=['POST'])
-def loginByPhone():
+@login_bp.route('/checkEmail', methods=['POST'])
+def checkEmail():
     data = request.get_json()
-    phone = data.get('phone')
+    email = data.get('email')
+
+    res = is_valid_email(email)
+    print(res)
+    return jsonify({"status" : "success","message": res}), 200 
+
+
+@login_bp.route('/loginUser', methods=['POST'])
+def loginByUser():
+    data = request.get_json()
+    user = data.get('user')
     type = str(data.get('type'))
+    process = 3
 
-    if not data or 'type' not in data or 'phone' not in data:
-        return jsonify({"status":'failed','message': 'No.HP wajib diisi.'}), 404
+    if not data or 'user' not in data:
+        return jsonify({"status":'failed','message': 'Kolom wajib diisi.'}), 202
     
-    checkRegisteredPhone = user_model.checkPhoneRegistered(phone)
+    if user.isdigit():
+        checkRegistered = user_model.checkPhoneRegistered(user)
+    elif is_valid_email(user) :
+        checkRegistered =user_model.getUserByEmail(user)
+    else:
+        return jsonify({"status":'failed','message': 'Data pengguna tidak ditemukan'}), 202
 
-    if checkRegisteredPhone is None:
-        return jsonify({"status":'failed','message': 'Nomor tidak ditemukan'}), 303
-    else:    
-        otp = generate_otp(phone, type)
+    if checkRegistered is None:
+        return jsonify({"status":'failed','message': 'Data pengguna tidak ditemukan'}), 202
+    else: 
+        if user.isdigit():   
+            type = "WA" if "type" not in data else type
+            otp = generate_otp(user, type)
 
-        if(otp is True):
-            return jsonify({"status" : "success","message": "OTP berhasil dikirim"}), 200 
+            # tambah var process 1 = belum set name, 2 = belum set pin, 3 sudah semua
+
+            if(otp is True):
+                return jsonify({"status" : "success","message": "OTP berhasil dikirim", "process" : process}), 200 
+            else:
+                return jsonify({"status" : "failed","message": "OTP gagal dikirim"}), 202 
+        elif is_valid_email(user) :
+            return jsonify({"status" : "success","message": "Berhasil masuk!"}), 200 
         else:
-            return jsonify({"status" : "failed","message": "OTP gagal dikirim"}), 303 
+            return jsonify({"status":'failed','message': 'Akses ditolak!'}), 202
+        
         
     
 @login_bp.route('/loginPinUser', methods=['POST'])
 def loginPinUser():
-    data = request.get_json()
-    phone = data.get('phone')
-    email = data.get('email')
-    pin = data.get('pin')
+    auth = request.authorization
 
-    if not data and ('email' not in data or 'phone' not in data) and len(pin) != 60:
-        return jsonify({"status" : "failed","message": "Akses ditolak"}), 400
+    if not auth or not auth.token:
+        return jsonify({'message': 'Akses ditolak'}), 202
 
-    pinCheck = checkPin(phone,email,'', pin)
+    result = generate_decode(auth.token)
+
+    result = result.split(login_delimiter)
+    if len(result) != 2:
+        return jsonify({'message': 'Akses Ditolak'}), 202
+    
+    user = result[0]
+    pin = result[1]
+
+    pinCheck = checkPin(user, pin)
     if(pinCheck is True):
-        if(email is not None):
-            UniqueID = user_model.getUserByEmail(email)
-        elif(phone is not None):
-            UniqueID = user_model.getUserByPhone(phone)
-        return jsonify({"status" : "success","message" : 'PIN cocok', "data" : UniqueID}), 200
+        if(user.isalpha()):
+            UniqueID = user_model.getUserByEmail(user)
+        elif(user.isdigit()):
+            UniqueID = user_model.getUserByPhone(user)
+
+        data = {
+            "id" : generate_encode(UniqueID[1]),
+            "name" : UniqueID[2],
+            "phone" : generate_encode(UniqueID[5])
+        }
+       
+        return jsonify({"status" : "success","message" : 'PIN cocok', "data" : data}), 200
     else:
-        return jsonify({"status" : "failed","message": "Akses ditolak"}), 400
+        return jsonify({"status" : "failed","message": "Akses ditolak"}), 202
     
 @login_bp.route('/loginPinMitra', methods=['POST'])
 def loginPinMitra():

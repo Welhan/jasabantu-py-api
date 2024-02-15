@@ -93,7 +93,7 @@ class User:
     def checkPhoneRegistered(self, phone):
         conn = create_connection()
         cur = conn.cursor()
-        query = "SELECT Phone FROM {} WHERE Phone = %s".format(self.USER_REQUEST_TABLE)
+        query = "SELECT Phone, Name, Pin FROM {} WHERE Phone = %s".format(self.USER_REQUEST_TABLE)
         cur.execute(query, (phone,))
         user = cur.fetchone()
         cur.close()
@@ -146,7 +146,7 @@ class User:
     def getUserByEmail(self, email):
         conn = create_connection()
         cur = conn.cursor()
-        query = "SELECT * FROM {} WHERE Email = %s".format(self.USER_REQUEST_TABLE)
+        query = "SELECT Email, Name, Pin FROM {} WHERE Email = %s".format(self.USER_REQUEST_TABLE)
         cur.execute(query, (email,))
         user = cur.fetchone()
         cur.close()
@@ -160,3 +160,11 @@ class User:
         uniqueid = cur.fetchone()
         cur.close
         return uniqueid
+    
+    def getLastCounterUniqueID(self):
+        conn = create_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT Counter FROM systab")
+        counter = cur.fetchone()
+        cur.close
+        return counter

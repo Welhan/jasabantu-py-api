@@ -17,6 +17,8 @@ user_bp = Blueprint('user_bp', __name__)
 user_model = User()
 otp_model = Otp()
 mitra_model = Mitra()
+
+#delimiter
 regis_delimiter = ":"
 
 # Untuk Contoh Auzthorization (nnt hapus)
@@ -29,11 +31,14 @@ def user_token():
     
     token = generate_decode(auth.token)
 
-    result = token. split(':')
+    data = request.get_json()
+    delimiter = str(data.get('delimiter'))
+
+    result = token. split(delimiter)
 
     data = {
-        "uniqueID" : result[0],
-        # 'name' : result[1]
+        "param1" : result[0],
+        'param2' : result[1]
     }
     
     return jsonify({"status": 'success', 'data': data}), 200
@@ -94,7 +99,7 @@ def checkROT():
     name = "Welhan"
     phone = "6281296023051"
 
-    hasil = str(uniqueID) + ":" + name + ":" + phone
+    hasil = str(uniqueID) + regis_delimiter + name + regis_delimiter + phone
     rotprocess = rot(hasil)
     unrotprocess = unrot(rotprocess)
     print(rotprocess, unrotprocess)
@@ -123,10 +128,19 @@ def test_rot():
         return jsonify({"status" : "failed","message": "Akses ditolak"}), 400
     res = phone + ":"+ otp
 
-    res = rot(res)
+    # res = rot(res)
 
     result = generate_encode(res)
-    # result = res
+    response = {
+        "status": "success",
+        "data": result
+    }
+    return jsonify(response), 200
+
+
+@user_bp.route('/test_uniqueid', methods=['POST'])
+def test_uniqueid():
+    result = generate_uniqueid()
     response = {
         "status": "success",
         "data": result
@@ -162,7 +176,6 @@ def verifyOtp():
         return jsonify({"status" : "failed",'message': 'Akses ditolak'}), 400
 
     result = generate_decode(auth.token)
-
     result = result.split(':')
     if len(result) != 2:
         return jsonify({"status" : "failed",'message': 'Akses ditolak'}), 400
@@ -180,13 +193,8 @@ def verifyOtp():
                 UniqueID = generate_uniqueid()
                 user_model.create_user_by_phone(phone, UniqueID)
                 token = generate_token(UniqueID)
-
                 insert_oauth(UniqueID,token, "") #pisah
-
                 result = generate_encode(UniqueID)
-
-                print(result)
-
                 data = {
                     "id" : result,
                     "token" : token
@@ -198,8 +206,6 @@ def verifyOtp():
                 }
                 return jsonify(response), 200
             else:
-                # verify otp untuk login
-                UniqueID = user_model.getUserByPhone(phone)[1]
                 response = {
                     "status" : "success",
                     "message" : "Kode OTP sesuai"
@@ -229,7 +235,7 @@ def set_profile():
 
     result = generate_decode(auth.token)
 
-    result = result.split(':')
+    result = result.split(regis_delimiter)
     if len(result) != 2:
         return jsonify({'message': 'Akses ditolak'}), 400
 

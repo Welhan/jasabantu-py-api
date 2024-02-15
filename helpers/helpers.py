@@ -3,18 +3,21 @@ from models.userModels import User
 from models.otpModels import Otp
 from models.authModels import Auth
 from models.mitraModels import Mitra
+from models.sysModel import Sys
 import random
 import bcrypt
 import requests
 import time
 import jwt
-from config.constants import WA_ENGINE, SECRET_KEY, SALT_KEY, ROT_KEY, ROT_NUM
+from config.constants import *
 import base64
+import re
 
 user_model = User()
 otp_model = Otp()
 auth_model = Auth()
 mitra_model = Mitra()
+sys_model = Sys()
 
 def generate_otp(phone, type):
     otp = str(random.randint(100000,999999))
@@ -77,19 +80,23 @@ def checkOtp(otp,phone):
     else:
         return False
 
-def checkPin(phone = '', email='', uniqueid ='', pin=''):
-    if(phone):
-       result = user_model.getUserByPhone(phone)[4]
-    elif(email):
-       result = user_model.getUserByEmail(email)[4]
-    elif(uniqueid):
-       result = user_model.getUserByUniqueID(uniqueid)[4]
+def checkPin(user ='', pin=''):
+    if user:
+        if user.isdigit():
+            result = user_model.getUserByPhone(user)[4]
+        elif user.isalpha():
+            result = user_model.getUserByEmail(user)[4]
     else:
         return False
-    if bcrypt.checkpw(pin.encode('utf-8'), result.encode('utf-8')):
-        return True
+    
+    if result is not None:
+        if bcrypt.checkpw(pin.encode('utf-8'), result.encode('utf-8')):
+            return True
+        else:
+            return False
     else:
         return False
+        
     
 def generate_token(UniqueID):
     payload = {'uniqueID' : UniqueID}
@@ -103,29 +110,15 @@ def insert_oauth(uniqueID, token, addr = ""):
     return False
 
 def generate_uniqueid():
-    user = user_model.getLastUniqueID()
-    mitra = mitra_model.getLastUniqueID()
-    UniqueID = str(random.randint(10000,99999))
-
-    if user is None and mitra is None:
-        return UniqueID + str(1)
-    
-    if user is None:
-        user = 0
-    else:
-        user = str(user[1])
-        user = int(user[5:])
-
-    if mitra is None:
-        mitra = 0
-    else:
-        mitra = str(mitra[1])
-        mitra =  int(mitra[5:])
-    
-    if user > mitra:
-        return UniqueID + str(user + 1)
-    elif user < mitra:
-        return UniqueID + str(mitra + 1)
+    Prefix = str(sys_model.prefix()[0])
+    Counter = sys_model.endfix()[0]
+    if(Counter is None) :
+        LastCounter = 1
+    else :
+        LastCounter = int(Counter) + 1
+    UniqueID = Prefix + str(random.randint(10000,99999)) + str(LastCounter)
+    sys_model.addCounter(LastCounter)
+    return UniqueID
 
 def rot(text):
     result = ''
@@ -155,3 +148,10 @@ def generate_encode(text):
 def generate_decode(token):
    result = base64.b64decode(token).decode()
    return unrot(result)
+
+def is_valid_email(email):
+    pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+    if re.match(pattern, email):
+        return True
+    else:
+        return False
