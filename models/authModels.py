@@ -14,3 +14,12 @@ class Auth:
             return cur.lastrowid
         else:
             return 0
+        
+    def check_uniqueID(self, uniqueID):
+        conn = create_connection_auth()
+        cur = conn.cursor()
+        query = "SELECT * FROM {} WHERE UniqueID = %s".format(self.AUTH_DB)
+        cur.execute(query, (uniqueID,))
+        auth = cur.fetchone()
+        cur.close()
+        return False if auth is None else True
