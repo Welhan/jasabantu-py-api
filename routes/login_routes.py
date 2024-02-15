@@ -72,18 +72,22 @@ def loginByUser():
     if checkRegistered is None:
         return jsonify({"status":'failed','message': 'Data pengguna tidak ditemukan'}), 202
     else: 
+        if checkRegistered[1] is None:
+            process = 1
+        elif checkRegistered[2] is None:
+            process = 2
+
         if user.isdigit():   
             type = "WA" if "type" not in data else type
             otp = generate_otp(user, type)
-
-            # tambah var process 1 = belum set name, 2 = belum set pin, 3 sudah semua
 
             if(otp is True):
                 return jsonify({"status" : "success","message": "OTP berhasil dikirim", "process" : process}), 200 
             else:
                 return jsonify({"status" : "failed","message": "OTP gagal dikirim"}), 202 
+            
         elif is_valid_email(user) :
-            return jsonify({"status" : "success","message": "Berhasil masuk!"}), 200 
+            return jsonify({"status" : "success","message": "Berhasil masuk!", "process" : process}), 200 
         else:
             return jsonify({"status":'failed','message': 'Akses ditolak!'}), 202
         
