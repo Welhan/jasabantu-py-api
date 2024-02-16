@@ -83,9 +83,9 @@ def checkOtp(otp,phone):
 def checkPin(user ='', pin=''):
     if user:
         if user.isdigit():
-            result = user_model.getUserByPhone(user)[4]
+            result = user_model.getUserByPhone(user)[2]
         elif user.isalpha():
-            result = user_model.getUserByEmail(user)[4]
+            result = user_model.getUserByEmail(user)[2]
     else:
         return False
     
@@ -104,6 +104,13 @@ def generate_token(UniqueID):
 
 def insert_oauth(uniqueID, token, addr = ""):
     insert = auth_model.new_login(uniqueID, token, addr)
+
+    if insert > 1:
+        return True
+    return False
+
+def update_oauth(uniqueID, token, addr = ""):
+    insert = auth_model.update_login(uniqueID, token, addr)
 
     if insert > 1:
         return True
@@ -142,6 +149,8 @@ def unrot(text):
 
 def generate_encode(text):
     result = rot(text)
+
+    # return result
 
     return base64.b64encode(result.encode('utf-8')).decode()
 

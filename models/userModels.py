@@ -93,7 +93,7 @@ class User:
     def checkPhoneRegistered(self, phone):
         conn = create_connection()
         cur = conn.cursor()
-        query = "SELECT Phone, Name, Pin FROM {} WHERE Phone = %s".format(self.USER_REQUEST_TABLE)
+        query = "SELECT Phone, Name, Pin, UniqueID FROM {} WHERE Phone = %s".format(self.USER_REQUEST_TABLE)
         cur.execute(query, (phone,))
         user = cur.fetchone()
         cur.close()
@@ -111,7 +111,7 @@ class User:
     def getUserByPhone(self, phone):
         conn = create_connection()
         cur = conn.cursor()
-        query = "SELECT * FROM {} WHERE Phone = %s".format(self.USER_REQUEST_TABLE)
+        query = "SELECT Phone, Name, Pin, UniqueID FROM {} WHERE Phone = %s".format(self.USER_REQUEST_TABLE)
         cur.execute(query, (phone,))
         user = cur.fetchone()
         cur.close()
@@ -146,7 +146,7 @@ class User:
     def getUserByEmail(self, email):
         conn = create_connection()
         cur = conn.cursor()
-        query = "SELECT Email, Name, Pin FROM {} WHERE Email = %s".format(self.USER_REQUEST_TABLE)
+        query = "SELECT Email, Name, Pin, UniqueID FROM {} WHERE Email = %s".format(self.USER_REQUEST_TABLE)
         cur.execute(query, (email,))
         user = cur.fetchone()
         cur.close()
@@ -168,3 +168,28 @@ class User:
         counter = cur.fetchone()
         cur.close
         return counter
+    
+    def checkCounterPin(self, uniqueid):
+        conn = create_connection()
+        cur = conn.cursor()
+        query = "SELECT CounterFailed FROM {} WHERE UniqueID = %s".format(self.USER_REQUEST_TABLE)
+        cur.execute(query, (uniqueid,))
+        counter = cur.fetchone()
+        cur.close
+        return counter
+    
+    def counterPin(self, uniqueid, counter):
+        conn = create_connection()
+        cur = conn.cursor()
+        query = "UPDATE {} SET CounterFailed = %s WHERE UniqueID = %s".format(self.USER_REQUEST_TABLE)
+        cur.execute(query, (counter, uniqueid,))
+        conn.commit()
+        cur.close()
+
+    def setNonActiveUser(self, uniqueid):
+        conn = create_connection()
+        cur = conn.cursor()
+        query = "UPDATE {} SET ActiveStatus = %s WHERE UniqueID = %s".format(self.USER_REQUEST_TABLE)
+        cur.execute(query, (0, uniqueid,))
+        conn.commit()
+        cur.close()

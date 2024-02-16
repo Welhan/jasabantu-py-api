@@ -12,5 +12,3 @@ SALT_KEY = bcrypt.gensalt()
 
 ROT_KEY = "aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ@#$_-&%:0123456789"
 ROT_NUM = 15
-
-PREFIX_USER = "003"

@@ -123,10 +123,8 @@ def test_rot():
     data = request.get_json()
     phone = str(data.get('phone'))
     otp = str(data.get('otp'))
-
-    if not data or 'phone' not in data and 'otp' not in data:
-        return jsonify({"status" : "failed","message": "Akses ditolak"}), 400
     res = phone + ":"+ otp
+    # res = phone
 
     # res = rot(res)
 
@@ -177,13 +175,15 @@ def verifyOtp():
 
     result = generate_decode(auth.token)
     result = result.split(':')
+
     if len(result) != 2:
         return jsonify({"status" : "failed",'message': 'Akses ditolak'}), 400
     
     phone = result[0]
     otp = result[1]
     
-    getOtp = otp_model.check_otp(phone)    
+    getOtp = otp_model.check_otp(phone)
+       
     if getOtp is not None:
         otp = checkOtp(otp, phone)
         if(otp is True):
@@ -193,7 +193,11 @@ def verifyOtp():
                 UniqueID = generate_uniqueid()
                 user_model.create_user_by_phone(phone, UniqueID)
                 token = generate_token(UniqueID)
-                insert_oauth(UniqueID,token, "") #pisah
+                oauth = auth_model.check_uniqueID(UniqueID)
+                if oauth is True :
+                    update_oauth(UniqueID, token, "")
+                else : 
+                    insert_oauth(UniqueID,token, "")
                 result = generate_encode(UniqueID)
                 data = {
                     "id" : result,
@@ -241,6 +245,9 @@ def set_profile():
 
     uniqueid = generate_decode(result[0])
     # name = result[1]
+    print(uniqueid)
+    print(generate_decode(result[0]))
+    print(result[1])
 
     data = request.get_json()
     name = str(data.get('name'))
@@ -269,8 +276,7 @@ def set_pin():
         return jsonify({'message': 'Akses ditolak'}), 400
 
     uniqueid = generate_decode(result[0])
-    pin = result[1]
-    
+    pin = result[1]    
     if len(pin) != 6 or not pin.isdigit():
         return jsonify({"status" : "failed","message": "Akses ditolak"}), 400
     
