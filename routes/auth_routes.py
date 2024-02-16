@@ -68,6 +68,17 @@ def loginByUser():
         checkRegistered = user_model.getUserByPhone(user)
     elif is_valid_email(user) :
         checkRegistered = user_model.getUserByEmail(user)
+        if checkRegistered is None:
+            createUser = user_model.create_user_by_email(user)
+            UniqueID = random.randint(10000,99999)
+            UniqueID = str(UniqueID)
+            UniqueID = UniqueID + str(createUser)
+            user_model.updateUniqueID(UniqueID, '', user)
+            return jsonify({"status" : "success","message": "Pendaftaran berhasil", "data" : generate_encode(UniqueID)}), 200
+        else:
+            uniqueID = checkRegistered[3]
+            return jsonify({"status" : "success","message": "Email sudah terdaftar"}), 200
+
     else:
         return jsonify({"status":'failed','message': 'Data pengguna tidak ditemukan'}), 202
 

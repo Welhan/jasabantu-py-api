@@ -13,12 +13,12 @@ class Mitra:
         cur.close
         return mitra
     
-    def registerMitra(self, UniqueID='', nama='', email='', phone=''):
+    def registerMitra(self, uniqueid='', nama='', email='', phone='', pin = '', address = ''):
         conn = create_connection_admin()
         cur = conn.cursor()
-        query = "INSERT INTO {} (UniqueID, Name, Email, Phone) VALUES (%s,%s,%s,%s)".format(self.MITRA_REQUEST_TABLE)
+        query = "INSERT INTO {} (UniqueID, Name, Email, Phone, Pin, Address) VALUES (%s,%s,%s,%s,%s,%s)".format(self.MITRA_REQUEST_TABLE)
         try:
-            cur.execute(query, (UniqueID, nama, email, phone,))
+            cur.execute(query, (uniqueid, nama, email, phone,pin, address))
             conn.commit()
             cur.close()
             conn.close()
