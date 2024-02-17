@@ -54,7 +54,6 @@ def checkPhoneMitra():
 @mitra_bp.route('/registerMitra', methods=['POST'])
 def registerMitra():
     auth = request.authorization
-    print(auth, auth.token)
     if not auth or not auth.token:
         return jsonify({'message': 'Akses ditolak'}), 400
     dataMitra = generate_decode(auth.token)
