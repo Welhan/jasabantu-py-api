@@ -2,10 +2,16 @@ from flask import Blueprint, Response, jsonify, request
 from models.userModels import User
 from models.otpModels import Otp
 from models.mitraModels import Mitra
-from config.constants import WA_ENGINE, SECRET_KEY, SALT_KEY
+from config.constants import WA_ENGINE, SECRET_KEY, SALT_KEY, path_auth
 from helpers.helpers import *
 import bcrypt
+import yagmail
 import base64
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 # import random
 # import json
 # import jwt
@@ -29,7 +35,7 @@ def user_token():
     if not auth or not auth.token:
         return jsonify({'message': 'Invalid credentials'}), 401
     
-    token = generate_decode(auth.token)
+    token = decode(auth.token)
 
     data = request.get_json()
     delimiter = str(data.get('delimiter'))
@@ -65,17 +71,6 @@ def getUser():
             "data": data
         }
         return jsonify(response), 200
-
-@user_bp.route('/getUniqueID', methods=['GET'])
-def getUniqueID():
-    data = {
-        "UniqueID" : generate_uniqueid()
-    }
-    response = {
-        "status": "success",
-        "data" : data
-    }
-    return jsonify(response), 200
     
 @user_bp.route('/check_phone', methods=['POST'])
 def check_phone():
@@ -91,54 +86,18 @@ def check_phone():
     else:
         return jsonify({"status" : "failed","message": "No.HP sudah terdaftar, silahkan login atau gunakan No.HP lain."}), 303 
 
-# Untuk Contoh ROT 
-@user_bp.route('/checkROT', methods=['POST'])
-def checkROT():
-    # data = request.get_json()
-    uniqueID = 123451
-    name = "Welhan"
-    phone = "6281296023051"
-
-    hasil = str(uniqueID) + regis_delimiter + name + regis_delimiter + phone
-    rotprocess = rot(hasil)
-    unrotprocess = unrot(rotprocess)
-    print(rotprocess, unrotprocess)
-    result1 = base64.b64encode(rotprocess.encode()).decode()
-    result2 = base64.b64encode(unrotprocess.encode()).decode()
-    result3 = base64.b64decode(result1).decode()
-    result3 = unrot(result3)
-    print(result1, result2)
-    response = {
-        "1": hasil,
-        "2": result1,
-        "3": result2,
-        "4" : result3
-    }
-    print (response)
-    return jsonify(response), 200
-
 # Keperluan Test ROT dan Encode
 @user_bp.route('/test_rot', methods=['POST'])
 def test_rot():
     data = request.get_json()
-    phone = str(data.get('phone'))
-    otp = str(data.get('otp'))
-    res = phone + ":"+ otp
-    # res = phone
-
-    # res = rot(res)
-
-    result = generate_encode(res)
-    response = {
-        "status": "success",
-        "data": result
-    }
-    return jsonify(response), 200
-
-
-@user_bp.route('/test_uniqueid', methods=['POST'])
-def test_uniqueid():
-    result = generate_uniqueid()
+    param1 = data.get('param1')
+    param2 = data.get('param2')
+    delimiter = data.get('delimiter')
+    res = str(param1)
+    if param2 is not None and delimiter is not None:
+        res = str(param1) + str(delimiter) + str(param2)
+    
+    result = encode(res)
     response = {
         "status": "success",
         "data": result
@@ -172,13 +131,14 @@ def verifyOtp():
 
     if not auth or not auth.token:
         return jsonify({"status" : "failed",'message': 'Akses ditolak'}), 400
-
-    result = generate_decode(auth.token)
-    result = result.split(':')
+    
+    result = decode(auth.token)
+    result = result.split(regis_delimiter)
 
     if len(result) != 2:
         return jsonify({"status" : "failed",'message': 'Akses ditolak'}), 400
     
+    data = request.get_json()
     phone = result[0]
     otp = result[1]
     
@@ -187,28 +147,41 @@ def verifyOtp():
     if getOtp is not None:
         otp = checkOtp(otp, phone)
         if(otp is True):
+            if not data or 'flag' not in data:
+                return jsonify({"status" : "failed",'message': 'Akses ditolak'}), 400
+
+            flag = str(data.get('flag')) # new_register || register_phone
             checkPhone = user_model.checkPhoneRegistered(phone)
             if checkPhone is None:
                 otp_model.delete_otp(phone)
-                UniqueID = generate_uniqueid()
-                user_model.create_user_by_phone(phone, UniqueID)
-                token = generate_token(UniqueID)
-                oauth = auth_model.check_uniqueID(UniqueID)
-                if oauth is True :
-                    update_oauth(UniqueID, token, "")
-                else : 
-                    insert_oauth(UniqueID,token, "")
-                result = generate_encode(UniqueID)
-                data = {
-                    "id" : result,
-                    "token" : token
-                }
-                response = {
-                    "status": "success",
-                    "message": "Kode OTP sesuai",
-                    "data": data
-                }
-                return jsonify(response), 200
+                if flag == "new_user":
+                    UniqueID = generate_uniqueid()
+                    user_model.create_user_by_phone(phone, UniqueID, 1)
+                    token = generate_token(UniqueID)
+                    oauth = auth_model.check_uniqueID(UniqueID)
+                    if oauth is True :
+                        update_oauth(UniqueID, token, "")
+                    else : 
+                        insert_oauth(UniqueID,token, "")
+                    result = encode(UniqueID)
+                    data = {
+                        "id" : result,
+                        "token" : token
+                    }
+                    response = {
+                        "status": "success",
+                        "message": "Kode OTP sesuai",
+                        "data": data
+                    }
+                    return jsonify(response), 200
+                elif flag == "register_phone":
+                    response = {
+                    "status" : "success",
+                    "message" : "Kode OTP sesuai"
+                    }
+                    return jsonify(response), 200
+                else:
+                    return jsonify({"status" : "failed",'message': 'Akses ditolak'}), 400
             else:
                 response = {
                     "status" : "success",
@@ -237,29 +210,35 @@ def set_profile():
     if not auth or not auth.token:
         return jsonify({'message': 'Akses ditolak'}), 400
 
-    result = generate_decode(auth.token)
+    result = decode(auth.token)
 
     result = result.split(regis_delimiter)
     if len(result) != 2:
         return jsonify({'message': 'Akses ditolak'}), 400
 
-    uniqueid = generate_decode(result[0])
-    # name = result[1]
-    print(uniqueid)
-    print(generate_decode(result[0]))
-    print(result[1])
-
+    uniqueid = decode(result[0])
+    userdata = user_model.getUserByUniqueID(uniqueid)
     data = request.get_json()
-    name = str(data.get('name'))
+    name = str(data.get('name')) 
+    phone = ''
+    email = ''
 
+    if userdata is None:
+        return jsonify({'message': 'Akses ditolak'}), 400  
+    else:
+        phone = userdata[6]     
+        email = userdata[3]  
+          
     if not data or 'name' not in data:
         return jsonify({"status" : "failed","message": "Data tidak lengkap"}), 202
 
-    setProfile = user_model.setProfile(uniqueid, name)
+    setProfile = user_model.setProfile(uniqueid, name, email,phone,1)
     if (setProfile is True):
-        return jsonify({"status" : "success","message": "Pendaftaran berhasil"}), 200
+        return jsonify({"status" : "success","message": "Set nama berhasil"}), 200
     else:
-        return jsonify({"status" : "failed","message": "Pendaftaran gagal"}), 400
+        return jsonify({"status" : "failed","message": "Set nama gagal"}), 400
+
+    
 
 # Untuk Set PIN
 @user_bp.route('/users/set_pin', methods=['POST'])
@@ -269,44 +248,54 @@ def set_pin():
     if not auth or not auth.token:
         return jsonify({'message': 'Akses ditolak'}), 400
 
-    result = generate_decode(auth.token)
+    result = decode(auth.token)
 
     result = result.split(':')
     if len(result) != 2:
         return jsonify({'message': 'Akses ditolak'}), 400
 
-    uniqueid = generate_decode(result[0])
-    pin = result[1]    
-    if len(pin) != 6 or not pin.isdigit():
+    uniqueid = decode(result[0])
+    getPhone = user_model.getUserByUniqueID(uniqueid)[5]
+    getOtp = otp_model.check_request_exist(getPhone)
+    if getOtp is None :
+        pin = result[1]    
+        if len(pin) != 6 or not pin.isdigit():
+            return jsonify({"status" : "failed","message": "Akses ditolak"}), 400
+        
+        checkUser = user_model.getUserByUniqueID(uniqueid)
+        if len(checkUser) == 0:
+            return jsonify({"status" : "failed","message": "PIN gagal disimpan"}), 400
+        else:
+            user_model.updatePin(uniqueid, bcrypt.hashpw(pin.encode('utf-8'), SALT_KEY))
+            return jsonify({"status" : "success","message": "PIN berhasil disimpan"}), 200    
+    else :
         return jsonify({"status" : "failed","message": "Akses ditolak"}), 400
-    
-    checkUser = user_model.getUserByUniqueID(uniqueid)
-    if len(checkUser) == 0:
-        return jsonify({"status" : "failed","message": "PIN gagal disimpan"}), 400
-    else:
-        user_model.updatePin(uniqueid, bcrypt.hashpw(pin.encode('utf-8'), SALT_KEY))
-        return jsonify({"status" : "success","message": "PIN berhasil disimpan"}), 200    
 
 # Untuk Update PIN
-@user_bp.route('/users/update_pin', methods=['PUT'])
-def update_pin():
-    data = request.get_json()
-    uniqueid = data.get('uniqueid')
-    pin = str(data.get('pin'))
+# @user_bp.route('/users/update_pin', methods=['PUT'])
+# def update_pin():
+#     auth = request.authorization
 
-    if not data or 'uniqueid' not in data or 'pin' not in data:
-        return jsonify({"status" : "failed","message": "Akses ditolak"}), 400
-    
-    if len(pin) != 60:
-        return jsonify({"status" : "failed","message": "Akses ditolak"}), 400
-    
-    getUser = user_model.getUserByUniqueID(uniqueid)
+#     if not auth or not auth.token:
+#         return jsonify({'message': 'Akses ditolak'}), 400
 
-    if getUser is None:
-        return jsonify({"status" : "failed","message": "Akses ditolak"}), 400
-    else :
-        user_model.updatePin(getUser[0], pin)
-        return jsonify({"status" : "success","message": "PIN berhasil disimpan"}), 200
+#     result = decode(auth.token)
+
+#     result = result.split(':')
+#     if len(result) != 2:
+#         return jsonify({'message': 'Akses ditolak'}), 400
+
+#     uniqueid = decode(result[0])
+#     pin = result[1]    
+#     if len(pin) != 6 or not pin.isdigit():
+#         return jsonify({"status" : "failed","message": "Akses ditolak"}), 400
+    
+#     checkUser = user_model.getUserByUniqueID(uniqueid)
+#     if len(checkUser) == 0:
+#         return jsonify({"status" : "failed","message": "PIN gagal disimpan"}), 400
+#     else:
+#         user_model.updatePin(uniqueid, bcrypt.hashpw(pin.encode('utf-8'), SALT_KEY))
+#         return jsonify({"status" : "success","message": "PIN berhasil disimpan"}), 200    
             
 # Delete User menggunakan Soft Delete
 @user_bp.route('/users/<int:user_id>', methods=['DELETE'])
@@ -317,5 +306,141 @@ def delete_user(user_id):
         return jsonify({"status" : "success","message": "Menghapus pengguna berhasil"})
     return jsonify({"status" : "failed","message": "Pengguna tidak ditemukan"}), 303
 
+@user_bp.route('/users/set_phone', methods=['PUT'])
+def set_phone():
+    auth = request.authorization
 
+    if not auth or not auth.token:
+        return jsonify({'message': 'Akses ditolak'}), 400
 
+    result = decode(auth.token)
+    result = result.split(regis_delimiter)
+
+    if len(result) != 2:
+        return jsonify({'message': 'Akses ditolak'}), 400
+
+    uniqueid = decode(result[0])
+    email = result[1]
+
+    checkEmail = user_model.getUserByUniqueID(uniqueid)
+
+    if checkEmail is None or checkEmail[3] != email:
+        return jsonify({'message': 'Akses ditolak'}), 400 
+   
+    data = request.get_json()
+    phone = str(data.get('phone'))
+
+    type = "WA" if "type" not in data else type
+    otp = generate_otp(phone, type)
+
+    if(otp is True):
+        return jsonify({"status" : "success","message": "OTP berhasil dikirim"}), 200 
+    else:
+        return jsonify({"status" : "failed","message": "OTP gagal dikirim"}), 400 
+
+@user_bp.route('/users/update_phone', methods=['PUT'])
+def update_phone():
+    auth = request.authorization
+
+    if not auth or not auth.token:
+        return jsonify({'message': 'Invalid credentials'}), 401
+    
+    result = decode(auth.token)
+    result = result.split(regis_delimiter)
+
+    if len(result) != 2:
+        return jsonify({'message': 'Akses ditolak'}), 400
+
+    uniqueid = decode(result[0])
+    phone = result[1]
+
+    userdata = user_model.getUserByUniqueID(uniqueid)
+    
+    if userdata is None:
+        return jsonify({'message': 'Akses ditolak'}), 400
+    else:
+        name = userdata[2]
+        email = userdata[3]
+        phone = phone if phone is not None else userdata[6]
+        active = userdata[8]
+
+        setProfile = user_model.setProfile(uniqueid, name, email, phone, active)
+        if (setProfile is True):
+            return jsonify({"status" : "success","message": "Set profile berhasil"}), 200
+        else:
+            return jsonify({"status" : "failed","message": "Set profile gagal"}), 400
+
+@user_bp.route('/users/set_email', methods=['PUT'])
+def set_email():
+    data = request.get_json()
+    email = str(data.get('email'))
+
+    if is_valid_email(email):
+        if send_otp_email(email):
+            return jsonify({"status" : "success","message": "Lakukan verifikasi email anda"}), 200
+        else:
+            return jsonify({"status" : "success","message": "Gagal mengirimkan verifikasi ke email anda. Silahkan hubungi admin"}), 202
+    else:
+        return jsonify({"status" : "failed","message": "Format Email Salah"}), 400
+    
+@user_bp.route('/users/otp_email', methods=['POST'])
+def verifyOtpEmail():
+    auth = request.authorization
+
+    if not auth or not auth.token:
+        return jsonify({"status" : "failed",'message': 'Akses ditolak'}), 400
+    
+    result = decode(auth.token)
+    result = result.split(regis_delimiter)
+
+    if len(result) != 3:
+        return jsonify({"status" : "failed",'message': 'Akses ditolak'}), 400
+    
+    data = request.get_json()
+    email = result[0]
+    otp = result[1]
+    uniqueid = result[2]
+    
+    getOtp = otp_model.check_otp(email)
+       
+    if getOtp is not None:
+        otp = checkOtp(otp, email)
+        if(otp is True):
+            if not data or 'flag' not in data:
+                return jsonify({"status" : "failed",'message': 'Akses ditolak'}), 400
+
+            checkPhone = user_model.checkPhoneRegistered(email)
+            if checkPhone is None:
+                otp_model.delete_otp(email)
+                userdata = user_model.getUserByUniqueID(uniqueid)
+                if userdata is None:
+                    return jsonify({'message': 'Akses ditolak'}), 400
+                else:
+                    name = userdata[2]
+                    email = result[0]
+                    phone = phone if phone is not None else userdata[6]
+                    active = userdata[8]
+
+                    setProfile = user_model.setProfile(uniqueid, name, email, phone, active)
+                    if (setProfile is True):
+                        return jsonify({"status" : "success","message": "Set profile berhasil"}), 200
+                    else:
+                        return jsonify({"status" : "failed","message": "Set profile gagal"}), 400
+            else:
+                response = {
+                    "status" : "success",
+                    "message" : "Kode OTP sesuai"
+                }
+                return jsonify(response), 200
+        else:
+            response = {
+                    "status" : "failed",
+                    "message" : "Kode OTP tidak sesuai"
+                }
+            return jsonify(response), 400
+    else:
+        response = {
+                    "status" : "failed",
+                    "message" : "Kode OTP tidak sesuai"
+                }
+        return jsonify(response), 400

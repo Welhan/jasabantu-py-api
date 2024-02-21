@@ -10,8 +10,14 @@ import requests
 import time
 import jwt
 from config.constants import *
-import base64
 import re
+import base64
+from email.mime.text import MIMEText
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from requests import HTTPError
+import pickle
+import os
 
 user_model = User()
 otp_model = Otp()
@@ -25,7 +31,8 @@ def generate_otp(phone, type):
             "message" : "*" +str(otp)+"* adalah kode OTP untuk pendaftaran akun anda. Mohon untuk tidak membagikan atau memberitahukan kode ini kepada siapapun.",
             "recipient" : phone
         }
-    checkOtpPhone = otp_model.check_phone_exist(phone)
+    
+    checkOtpPhone = otp_model.check_request_exist(phone)
 
     if checkOtpPhone is not None:
         count = int(checkOtpPhone[1])
@@ -127,11 +134,21 @@ def generate_uniqueid():
     sys_model.addCounter(LastCounter)
     return UniqueID
 
+# def rot(text):
+#     result = ''
+#     for char in text:
+#         if char in ROT_KEY:
+#             new_char = ROT_KEY[(ROT_KEY.index(char) + ROT_NUM) % len(ROT_KEY)]
+#         else:
+#             result += char
+#         result += new_char
+#     return result
+
 def rot(text):
     result = ''
     for char in text:
-        if char in ROT_KEY:
-            new_char = ROT_KEY[(ROT_KEY.index(char) + ROT_NUM) % len(ROT_KEY)]
+        if char in NEW_KEY:
+            new_char = NEW_KEY[(NEW_KEY.index(char) + ROT_NUM) % len(NEW_KEY)]
         else:
             result += char
         result += new_char
@@ -140,23 +157,40 @@ def rot(text):
 def unrot(text):
     result = ''
     for char in text:
-        if char in ROT_KEY: 
-            new_char = ROT_KEY[(ROT_KEY.index(char) - ROT_NUM) % len(ROT_KEY)]
+        if char in NEW_KEY: 
+            new_char = NEW_KEY[(NEW_KEY.index(char) - ROT_NUM) % len(NEW_KEY)]
         else:
             new_char = char  
         result += new_char  
     return result
 
-def generate_encode(text):
+# def unrot(text):
+#     result = ''
+#     for char in text:
+#         if char in ROT_KEY: 
+#             new_char = ROT_KEY[(ROT_KEY.index(char) - ROT_NUM) % len(ROT_KEY)]
+#         else:
+#             new_char = char  
+#         result += new_char  
+#     return result
+
+# def generate_encode(text):
+#     result = rot(text)
+#     return base64.b64encode(result.encode('utf-8')).decode()
+
+
+def encode(text):
     result = rot(text)
+    return PREFIX_KEY + base64.b64encode(result.encode('utf-8')).decode()
 
-    # return result
+def decode(token):
+    token = token.split("$")[3] 
+    result = base64.b64decode(token).decode()
+    return unrot(result)
 
-    return base64.b64encode(result.encode('utf-8')).decode()
-
-def generate_decode(token):
-   result = base64.b64decode(token).decode()
-   return unrot(result)
+# def generate_decode(token):
+#    result = base64.b64decode(token).decode()
+#    return unrot(result)
 
 def is_valid_email(email):
     pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
@@ -164,3 +198,91 @@ def is_valid_email(email):
         return True
     else:
         return False
+    
+def send_otp_email(email):
+    otp = str(random.randint(100000,999999))
+
+    # Define SCOPES and check for existing credentials
+    SCOPES = ['https://www.googleapis.com/auth/gmail.send']
+    creds = None
+
+    if os.path.exists('config/token.pickle'):
+        with open('config/token.pickle', 'rb') as token:
+            creds = pickle.load(token)
+
+    # If credentials are invalid or missing, perform OAuth 2.0 flow
+    if not creds or not creds.valid:
+        flow = InstalledAppFlow.from_client_secrets_file('config/credential.json', SCOPES)
+        creds = flow.run_local_server(port=0, prompt='consent')
+
+    # Save the credentials for the next run
+    with open('config/token.pickle', 'wb') as token:
+        pickle.dump(creds, token)
+
+    # Build Gmail service
+    service = build('gmail', 'v1', credentials=creds)
+
+    # Compose email message with HTML content
+    message = MIMEText(f"""
+    <html>
+        <body>
+            <div style="font-family: Helvetica,Arial,sans-serif; min-width:1000px; overflow:auto; line-height:2">
+                <div style="margin:50px auto; width:100%; padding:20px 0">
+                    <div style="border-bottom:1px solid #eee">
+                        <a href="" style="font-size:1.4em; color: #f39c12; text-decoration:none; font-weight:600">JasaBantu</a>
+                    </div>
+                    <p style="font-size:1.1em">Hi,</p>
+                    <p>Thank you for choosing JasaBantu. Use the following OTP to complete your Sign Up procedures. OTP is valid for 5 minutes</p>
+                    <h2 style="background: #f39c12; margin: 0 auto; width: max-content; padding: 0 10px; color: #fff; border-radius: 4px;">{otp}</h2>
+                    <p style="font-size:0.9em;">Regards,<br />JasaBantu</p>
+                    <hr style="border:none; border-top:1px solid #eee" />
+                    <div style="float:right; padding:8px 0; color:#aaa; font-size:0.8em; line-height:1; font-weight:300">
+                        <p>PT. Aplikasi Karya Jasa Bantu</p>
+                        <p>Ruko Boston RBRB 10-11</p>
+                        <p>Pantai Indah Kapuk 2</p>
+                    </div>
+                </div>
+            </div>
+        </body>
+    </html>
+    """, 'html')
+    message['to'] = email
+    message['subject'] = 'OTP Verification'
+
+    # Encode the message as raw MIMEText
+    raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
+
+    checkEmail = otp_model.check_request_exist(email)
+
+    if checkEmail is not None:
+        count = int(checkEmail[1])
+        if count + 1 >= 6:
+            delay = 86400
+        else:
+            if count + 1 >= 5 :
+                delay = (count * 3600) - 5
+            else:
+                delay = (count * 300) - 5
+
+        if delay > 86400: 
+            delay = 5
+
+    else:
+        count = 0
+        delay = 5
+
+    # Send the email
+    try:
+        sent_message = service.users().messages().send(userId='me', body={'raw': raw_message}).execute()
+
+        otp = bcrypt.hashpw(otp.encode('utf-8'), SALT_KEY)
+        if checkEmail is None:
+            otp_model.create_otp(email, otp, count + 1)
+        else:
+            otp_model.update_otp(email, otp, count + 1)
+        print(f"Sent message to {message['to']}. Message Id: {sent_message['id']}")
+        return True
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return False
+    

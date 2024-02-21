@@ -8,29 +8,29 @@ class Otp:
     OTP_REQUEST_TABLE = "otp_request"
     # lokasi = 'Asia/Jakarta'
     # zona_waktu = pytz.timezone(lokasi)
-    def create_otp(self, phone, otp, counter):
+    def create_otp(self, requestFrom, otp, counter):
         conn = create_connection()
         cur = conn.cursor()        
-        query = "INSERT INTO {} (Phone, Otp, RequestDate, Counter) VALUES (%s, %s, %s, %s)".format(self.OTP_REQUEST_TABLE)
-        cur.execute(query, (phone, otp ,datetime.now(zona_waktu), counter,))
+        query = "INSERT INTO {} (RequestFrom, Otp, RequestDate, Counter) VALUES (%s, %s, %s, %s)".format(self.OTP_REQUEST_TABLE)
+        cur.execute(query, (requestFrom, otp ,datetime.now(zona_waktu), counter,))
         conn.commit()
         cur.close()
 
-    def update_otp(self, phone, otp, counter):
+    def update_otp(self, requestFrom, otp, counter):
         conn = create_connection()
         cur = conn.cursor()        
-        query = "UPDATE {} SET Otp = %s, Counter = %s, RequestDate = %s WHERE Phone = %s".format(self.OTP_REQUEST_TABLE)
-        cur.execute(query, (otp, counter, datetime.now(zona_waktu), phone,))
+        query = "UPDATE {} SET Otp = %s, Counter = %s, RequestDate = %s WHERE RequestFrom = %s".format(self.OTP_REQUEST_TABLE)
+        cur.execute(query, (otp, counter, datetime.now(zona_waktu), requestFrom,))
         conn.commit()
         cur.close()
 
-    def check_phone_exist(self, phone, otp = 0):
+    def check_request_exist(self, requestFrom, otp = 0):
         conn = create_connection()
         cur = conn.cursor()        
         if otp :
-            cur.execute("SELECT ID, Counter, RequestDate FROM otp_request WHERE Phone = %s AND Otp = %s", (phone, otp,))
+            cur.execute("SELECT ID, Counter, RequestDate FROM otp_request WHERE RequestFrom = %s AND Otp = %s", (requestFrom, otp,))
         else:
-            cur.execute("SELECT ID, Counter, RequestDate FROM otp_request WHERE Phone = %s ", (phone,))
+            cur.execute("SELECT ID, Counter, RequestDate FROM otp_request WHERE RequestFrom = %s ", (requestFrom,))
         check = cur.fetchone()
         cur.close()
         return check
@@ -38,7 +38,7 @@ class Otp:
     def check_otp(self, phone):
         conn = create_connection()
         cur = conn.cursor()        
-        cur.execute("SELECT ID, Otp FROM otp_request WHERE Phone = %s", (phone,))
+        cur.execute("SELECT ID, Otp FROM otp_request WHERE RequestFrom = %s", (phone,))
         check = cur.fetchone()
         cur.close()
         return check    
@@ -54,7 +54,7 @@ class Otp:
     def delete_otp (self, phone):
         conn = create_connection()
         cur = conn.cursor()        
-        query = "DELETE FROM {} WHERE Phone = %s".format(self.OTP_REQUEST_TABLE)
+        query = "DELETE FROM {} WHERE RequestFrom = %s".format(self.OTP_REQUEST_TABLE)
         cur.execute(query, (phone,))
         conn.commit()
         cur.close()

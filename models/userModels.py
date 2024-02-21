@@ -6,11 +6,11 @@ from config.config import create_connection_admin
 
 class User:        
     USER_REQUEST_TABLE = "user"
-    def create_user_by_phone(self, phone, uniqueID):
+    def create_user_by_phone(self, phone, uniqueID, verifyPhone):
         conn = create_connection()
         cur = conn.cursor()
-        query = "INSERT INTO {} (Phone, UniqueID, CreatedDate) VALUES (%s, %s, %s)".format(self.USER_REQUEST_TABLE)
-        cur.execute(query, (phone, uniqueID, datetime.now()))
+        query = "INSERT INTO {} (Phone, VerifyPhoneF, UniqueID, CreatedDate) VALUES (%s, %s, %s, %s)".format(self.USER_REQUEST_TABLE)
+        cur.execute(query, (phone, verifyPhone, uniqueID, datetime.now()))
         conn.commit()
         cur.close()
         if cur.rowcount == 1:
@@ -30,17 +30,16 @@ class User:
         else:
             return 0
     
-    def setProfile(self, uniqueid, name):
+    def setProfile(self, uniqueid = '', name = '', email = '', phone = '', active = 0):
         conn = create_connection()
         cur = conn.cursor()
-        query = "UPDATE {} SET Name = %s WHERE UniqueID = %s".format(self.USER_REQUEST_TABLE)
-        cur.execute(query, (name, uniqueid))
+        query = "UPDATE {} SET Name = %s, Email = %s, Phone = %s, ActiveStatus = %s, UpdatedDate = %s WHERE UniqueID = %s".format(self.USER_REQUEST_TABLE)
+        cur.execute(query, (name, email, phone, active, datetime.now(), uniqueid))
         conn.commit()
         cur.close()
-        if cur.rowcount == 1:
-            return True
-        else:
-            return False
+
+        return True if cur.rowcount == 1 else False
+
         
     def updateUniqueID(self, uniqueid, phone = '', email = ''):
         conn = create_connection()
@@ -93,7 +92,7 @@ class User:
     def checkPhoneRegistered(self, phone):
         conn = create_connection()
         cur = conn.cursor()
-        query = "SELECT Phone, Name, Pin, UniqueID FROM {} WHERE Phone = %s".format(self.USER_REQUEST_TABLE)
+        query = "SELECT Phone, Name, Pin, UniqueID FROM {} WHERE RequestFrom = %s".format(self.USER_REQUEST_TABLE)
         cur.execute(query, (phone,))
         user = cur.fetchone()
         cur.close()
@@ -111,7 +110,7 @@ class User:
     def getUserByPhone(self, phone):
         conn = create_connection()
         cur = conn.cursor()
-        query = "SELECT Phone, Name, Pin, UniqueID FROM {} WHERE Phone = %s".format(self.USER_REQUEST_TABLE)
+        query = "SELECT Phone, Name, Pin, UniqueID FROM {} WHERE Phone = %s AND ActiveStatus = 1".format(self.USER_REQUEST_TABLE)
         cur.execute(query, (phone,))
         user = cur.fetchone()
         cur.close()
@@ -146,7 +145,7 @@ class User:
     def getUserByEmail(self, email):
         conn = create_connection()
         cur = conn.cursor()
-        query = "SELECT Email, Name, Pin, UniqueID FROM {} WHERE Email = %s".format(self.USER_REQUEST_TABLE)
+        query = "SELECT Email, Name, Pin, UniqueID FROM {} WHERE Email = %s AND ActiveStatus = 1".format(self.USER_REQUEST_TABLE)
         cur.execute(query, (email,))
         user = cur.fetchone()
         cur.close()

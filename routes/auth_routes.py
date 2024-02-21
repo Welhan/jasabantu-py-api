@@ -50,7 +50,6 @@ def checkEmail():
     email = data.get('email')
 
     res = is_valid_email(email)
-    print(res)
     return jsonify({"status" : "success","message": res}), 200 
 
 
@@ -74,38 +73,35 @@ def loginByUser():
             UniqueID = str(UniqueID)
             UniqueID = UniqueID + str(createUser)
             user_model.updateUniqueID(UniqueID, '', user)
-            return jsonify({"status" : "success","message": "Pendaftaran berhasil", "data" : generate_encode(UniqueID)}), 200
+            return jsonify({"status" : "success","message": "Pendaftaran berhasil", "data" : encode(UniqueID)}), 200
         else:
             uniqueID = checkRegistered[3]
-            return jsonify({"status" : "success","message": "Email sudah terdaftar"}), 200
-
     else:
         return jsonify({"status":'failed','message': 'Data pengguna tidak ditemukan'}), 202
 
     if checkRegistered is None:
         return jsonify({"status":'failed','message': 'Data pengguna tidak ditemukan'}), 202
     else: 
-
         uniqueID = checkRegistered[3]
 
-        if checkRegistered[1] is None:
-            process = 1
-        elif checkRegistered[2] is None:
-            process = 2
+    if checkRegistered[1] is None:
+        process = 1
+    elif checkRegistered[2] is None:
+        process = 2
 
-        if user.isdigit():   
-            type = "WA" if "type" not in data else type
-            otp = generate_otp(user, type)
+    if user.isdigit():   
+        type = "WA" if "type" not in data else type
+        otp = generate_otp(user, type)
 
-            if(otp is True):
-                return jsonify({"status" : "success","message": "OTP berhasil dikirim", "process" : process, 'id' : generate_encode(uniqueID)}), 200 
-            else:
-                return jsonify({"status" : "failed","message": "OTP gagal dikirim"}), 202 
-            
-        elif is_valid_email(user) :
-            return jsonify({"status" : "success","message": "Berhasil masuk!", "process" : process, 'id' : generate_encode(uniqueID)}), 200 
+        if(otp is True):
+            return jsonify({"status" : "success","message": "OTP berhasil dikirim", "process" : process, 'id' : encode(uniqueID)}), 200 
         else:
-            return jsonify({"status":'failed','message': 'Akses ditolak!'}), 202
+            return jsonify({"status" : "failed","message": "OTP gagal dikirim"}), 202 
+        
+    elif is_valid_email(user) :
+        return jsonify({"status" : "success","message": "Berhasil masuk!", "process" : process, 'id' : encode(uniqueID)}), 200 
+    else:
+        return jsonify({"status":'failed','message': 'Akses ditolak!'}), 202
       
     
 @auth_bp.route('/loginPinUser', methods=['POST'])
@@ -115,7 +111,7 @@ def loginPinUser():
     if not auth or not auth.token:
         return jsonify({'message': 'Akses ditolak'}), 202
 
-    result = generate_decode(auth.token)
+    result = decode(auth.token)
     result = result.split(login_delimiter)
     if len(result) != 2:
         return jsonify({'message': 'Akses Ditolak'}), 202
@@ -123,7 +119,7 @@ def loginPinUser():
     user = result[0]
     pin = result[1]
 
-    if(user.isalpha()):
+    if(is_valid_email(user)):
         UniqueID = user_model.getUserByEmail(user)
     elif(user.isdigit()):
         UniqueID = user_model.getUserByPhone(user)
@@ -139,9 +135,9 @@ def loginPinUser():
         insert_oauth(uniqueID, token, "")
 
         data = {
-            "id" : generate_encode(UniqueID[1]),
+            "id" : encode(UniqueID[1]),
             "name" : UniqueID[2],
-            "phone" : generate_encode(UniqueID[5]),
+            "phone" : encode(UniqueID[5]),
             "token" : token
         }
        
@@ -190,9 +186,10 @@ def loginByEmail():
 
     if cekEmail is None:
         createUser = user_model.create_user_by_email(email)
-        UniqueID = random.randint(10000,99999)
-        UniqueID = str(UniqueID)
-        UniqueID = UniqueID + str(createUser)
+        UniqueID = generate_uniqueid()
+        # UniqueID = random.randint(10000,99999)
+        # UniqueID = str(UniqueID)
+        # UniqueID = UniqueID + str(createUser)
         user_model.updateUniqueID(UniqueID, '', email)
         return jsonify({"status" : "success","message": "Pendaftaran berhasil", "data" : UniqueID}), 200
     else:
@@ -204,14 +201,11 @@ def logout():
 
     if not auth or not auth.token:
         return jsonify({'message': 'Akses ditolak'}), 400
-    print(auth.token)
-    result = generate_decode(auth.token)
-    print(result)
+    result = decode(auth.token)
     result = result.split(':')
     if len(result) != 2:
         return jsonify({"status" : "failed",'message': 'Akses ditolak'}), 400
     uniqueid = result[0]
-    print(uniqueid)
     logout = auth_model.logout(uniqueid)
     if logout is True :
         return jsonify({"status" : "success","message": "Logout berhasil!"}), 200
