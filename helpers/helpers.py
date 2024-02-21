@@ -1,4 +1,5 @@
 # from flask import Blueprint, jsonify, request
+from flask import Request, request
 from models.userModels import User
 from models.otpModels import Otp
 from models.authModels import Auth
@@ -14,8 +15,9 @@ import re
 import base64
 from email.mime.text import MIMEText
 from google_auth_oauthlib.flow import InstalledAppFlow
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
-from requests import HTTPError
 import pickle
 import os
 
@@ -63,7 +65,7 @@ def generate_otp(phone, type):
                 otp_model.create_otp(phone, otp, count + 1)
             else:
                 otp_model.update_otp(phone, otp, count + 1)
-            return True
+            return [True, delay]
         else:
             return False
     elif(type == 'SMS'): 
@@ -178,10 +180,9 @@ def unrot(text):
 #     result = rot(text)
 #     return base64.b64encode(result.encode('utf-8')).decode()
 
-
 def encode(text):
     result = rot(text)
-    return PREFIX_KEY + base64.b64encode(result.encode('utf-8')).decode()
+    return PREFIX_KEY + base64.b64encode(result.encode('utf-8')).decode() # ignore
 
 def decode(token):
     token = token.split("$")[3] 
@@ -210,11 +211,16 @@ def send_otp_email(email):
         with open('config/token.pickle', 'rb') as token:
             creds = pickle.load(token)
 
+    if creds.refresh_token:
+        creds.refresh(Request())
+        with open('config/token.pickle', 'wb') as token:
+            pickle.dump(creds, token)
+    
     # If credentials are invalid or missing, perform OAuth 2.0 flow
     if not creds or not creds.valid:
         flow = InstalledAppFlow.from_client_secrets_file('config/credential.json', SCOPES)
         creds = flow.run_local_server(port=0, prompt='consent')
-
+    
     # Save the credentials for the next run
     with open('config/token.pickle', 'wb') as token:
         pickle.dump(creds, token)
@@ -265,11 +271,11 @@ def send_otp_email(email):
                 delay = (count * 300) - 5
 
         if delay > 86400: 
-            delay = 5
+            delay = 5 * 60
 
     else:
         count = 0
-        delay = 5
+        delay = 5 * 60
 
     # Send the email
     try:
@@ -281,7 +287,7 @@ def send_otp_email(email):
         else:
             otp_model.update_otp(email, otp, count + 1)
         print(f"Sent message to {message['to']}. Message Id: {sent_message['id']}")
-        return True
+        return [True, delay]
     except Exception as e:
         print(f"An error occurred: {e}")
         return False

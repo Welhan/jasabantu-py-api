@@ -5,13 +5,6 @@ from models.mitraModels import Mitra
 from config.constants import WA_ENGINE, SECRET_KEY, SALT_KEY, path_auth
 from helpers.helpers import *
 import bcrypt
-import yagmail
-import base64
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 # import random
 # import json
 # import jwt
@@ -118,8 +111,8 @@ def create_user():
         type = "WA" if "type" not in data else type
         otp = generate_otp(phone, type)
 
-        if(otp is True):
-            return jsonify({"status" : "success","message": "OTP berhasil dikirim"}), 200 
+        if(otp[0] is True):
+            return jsonify({"status" : "success","message": "OTP berhasil dikirim", "delay": otp[1]}), 200 
         else:
             return jsonify({"status" : "failed","message": "OTP gagal dikirim"}), 400 
     else:
@@ -329,6 +322,7 @@ def set_phone():
    
     data = request.get_json()
     phone = str(data.get('phone'))
+    type = str(data.get('type'))
 
     type = "WA" if "type" not in data else type
     otp = generate_otp(phone, type)
@@ -370,20 +364,84 @@ def update_phone():
         else:
             return jsonify({"status" : "failed","message": "Set profile gagal"}), 400
 
-@user_bp.route('/users/set_email', methods=['PUT'])
+@user_bp.route('/users/set_email', methods=['PUT', "POST"])
 def set_email():
-    data = request.get_json()
-    email = str(data.get('email'))
+    if request.method == "POST":
+        data = request.get_json()
+        email = str(data.get('email'))
 
-    if is_valid_email(email):
-        if send_otp_email(email):
-            return jsonify({"status" : "success","message": "Lakukan verifikasi email anda"}), 200
+        if is_valid_email(email):
+            sendOtp = send_otp_email(email)
+            if sendOtp[0] == True:
+                return jsonify({"status" : "success","message": "Lakukan verifikasi email anda", "delay" : sendOtp[1]}), 200
+            else:
+                return jsonify({"status" : "success","message": "Gagal mengirimkan verifikasi ke email anda. Silahkan hubungi admin"}), 202
         else:
-            return jsonify({"status" : "success","message": "Gagal mengirimkan verifikasi ke email anda. Silahkan hubungi admin"}), 202
+            return jsonify({"status" : "failed","message": "Format Email Salah"}), 400
+    elif request.method == 'PUT':
+        auth = request.authorization
+
+        if not auth or not auth.token:
+            return jsonify({"status" : "failed",'message': 'Akses ditolak'}), 400
+        
+        result = decode(auth.token)
+        result = result.split(regis_delimiter)
+
+        if len(result) != 3:
+            return jsonify({"status" : "failed",'message': 'Akses ditolak'}), 400
+        
+        data = request.get_json()
+        email = result[0]
+        otp = result[1]
+        uniqueid = result[2]
+        
+        getOtp = otp_model.check_otp(email)
+        
+        if getOtp is not None:
+            otp = checkOtp(otp, email)
+            if(otp is True):
+                if not data or 'flag' not in data:
+                    return jsonify({"status" : "failed",'message': 'Akses ditolak'}), 400
+
+                checkPhone = user_model.checkPhoneRegistered(email)
+                if checkPhone is None:
+                    otp_model.delete_otp(email)
+                    userdata = user_model.getUserByUniqueID(uniqueid)
+                    if userdata is None:
+                        return jsonify({'message': 'Akses ditolak'}), 400
+                    else:
+                        name = userdata[2]
+                        email = result[0]
+                        phone = phone if phone is not None else userdata[6]
+                        active = userdata[8]
+
+                        setProfile = user_model.setProfile(uniqueid, name, email, phone, active)
+                        if (setProfile is True):
+                            return jsonify({"status" : "success","message": "Set profile berhasil"}), 200
+                        else:
+                            return jsonify({"status" : "failed","message": "Set profile gagal"}), 400
+                else:
+                    response = {
+                        "status" : "success",
+                        "message" : "Kode OTP sesuai"
+                    }
+                    return jsonify(response), 200
+            else:
+                response = {
+                        "status" : "failed",
+                        "message" : "Kode OTP tidak sesuai"
+                    }
+                return jsonify(response), 400
+        else:
+            response = {
+                        "status" : "failed",
+                        "message" : "Kode OTP tidak sesuai"
+                    }
+            return jsonify(response), 400
     else:
-        return jsonify({"status" : "failed","message": "Format Email Salah"}), 400
+        return jsonify({"status" : "failed","message": "Akses ditolak"}), 400
     
-@user_bp.route('/users/otp_email', methods=['POST'])
+@user_bp.route('/users/verify_email', methods=['POST'])
 def verifyOtpEmail():
     auth = request.authorization
 

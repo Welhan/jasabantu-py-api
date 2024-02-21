@@ -93,8 +93,8 @@ def loginByUser():
         type = "WA" if "type" not in data else type
         otp = generate_otp(user, type)
 
-        if(otp is True):
-            return jsonify({"status" : "success","message": "OTP berhasil dikirim", "process" : process, 'id' : encode(uniqueID)}), 200 
+        if(otp[0] is True):
+            return jsonify({"status" : "success","message": "OTP berhasil dikirim", "process" : process, 'id' : encode(uniqueID), "delay": otp[1]}), 200 
         else:
             return jsonify({"status" : "failed","message": "OTP gagal dikirim"}), 202 
         
