@@ -1,4 +1,5 @@
 # from flask import Blueprint, jsonify, request
+from datetime import date
 from flask import Request, request
 from models.userModels import User
 from models.otpModels import Otp
@@ -105,7 +106,6 @@ def checkPin(user ='', pin=''):
             return False
     else:
         return False
-        
     
 def generate_token(UniqueID):
     payload = {'uniqueID' : UniqueID}
@@ -136,16 +136,6 @@ def generate_uniqueid():
     sys_model.addCounter(LastCounter)
     return UniqueID
 
-# def rot(text):
-#     result = ''
-#     for char in text:
-#         if char in ROT_KEY:
-#             new_char = ROT_KEY[(ROT_KEY.index(char) + ROT_NUM) % len(ROT_KEY)]
-#         else:
-#             result += char
-#         result += new_char
-#     return result
-
 def rot(text):
     result = ''
     for char in text:
@@ -166,20 +156,6 @@ def unrot(text):
         result += new_char  
     return result
 
-# def unrot(text):
-#     result = ''
-#     for char in text:
-#         if char in ROT_KEY: 
-#             new_char = ROT_KEY[(ROT_KEY.index(char) - ROT_NUM) % len(ROT_KEY)]
-#         else:
-#             new_char = char  
-#         result += new_char  
-#     return result
-
-# def generate_encode(text):
-#     result = rot(text)
-#     return base64.b64encode(result.encode('utf-8')).decode()
-
 def encode(text):
     result = rot(text)
     return PREFIX_KEY + base64.b64encode(result.encode('utf-8')).decode() # ignore
@@ -188,10 +164,6 @@ def decode(token):
     token = token.split("$")[3] 
     result = base64.b64decode(token).decode()
     return unrot(result)
-
-# def generate_decode(token):
-#    result = base64.b64decode(token).decode()
-#    return unrot(result)
 
 def is_valid_email(email):
     pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
@@ -203,7 +175,6 @@ def is_valid_email(email):
 def send_otp_email(email):
     otp = str(random.randint(100000,999999))
 
-    # Define SCOPES and check for existing credentials
     SCOPES = ['https://www.googleapis.com/auth/gmail.send']
     creds = None
 
@@ -216,19 +187,15 @@ def send_otp_email(email):
         with open('config/token.pickle', 'wb') as token:
             pickle.dump(creds, token)
     
-    # If credentials are invalid or missing, perform OAuth 2.0 flow
     if not creds or not creds.valid:
         flow = InstalledAppFlow.from_client_secrets_file('config/credential.json', SCOPES)
         creds = flow.run_local_server(port=0, prompt='consent')
     
-    # Save the credentials for the next run
     with open('config/token.pickle', 'wb') as token:
         pickle.dump(creds, token)
 
-    # Build Gmail service
     service = build('gmail', 'v1', credentials=creds)
 
-    # Compose email message with HTML content
     message = MIMEText(f"""
     <html>
         <body>
@@ -255,29 +222,30 @@ def send_otp_email(email):
     message['to'] = email
     message['subject'] = 'OTP Verification'
 
-    # Encode the message as raw MIMEText
     raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
 
     checkEmail = otp_model.check_request_exist(email)
 
     if checkEmail is not None:
-        count = int(checkEmail[1])
-        if count + 1 >= 6:
-            delay = 86400
-        else:
-            if count + 1 >= 5 :
-                delay = (count * 3600) - 5
+        if(checkEmail[2] == date.today()):
+            count = int(checkEmail[1])
+            if count + 1 >= 6:
+                delay = 86400
             else:
-                delay = (count * 300) - 5
+                if count + 1 >= 5 :
+                    delay = (count * 3600) - 5
+                else:
+                    delay = (count * 300) - 5
 
-        if delay > 86400: 
+            if delay > 86400: 
+                delay = 5 * 60
+        else:
+            count = 0
             delay = 5 * 60
-
     else:
         count = 0
         delay = 5 * 60
 
-    # Send the email
     try:
         sent_message = service.users().messages().send(userId='me', body={'raw': raw_message}).execute()
 

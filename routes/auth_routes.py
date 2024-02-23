@@ -7,13 +7,16 @@ import random
 import bcrypt
 from helpers.helpers import *
 
-
 auth_bp = Blueprint('auth_bp', __name__)
 user_model = User()
 mitra_model = Mitra()
 otp_model = Otp()
 auth_model = Auth()
 login_delimiter = ":"
+
+@auth_bp.route('/checkApiStatus', methods=['GET'])
+def checkStatus():
+    return jsonify({"status" : True}), 200
 
 @auth_bp.route('/mitraLoginByEmail', methods=['POST'])
 def mitraLoginByEmail():
