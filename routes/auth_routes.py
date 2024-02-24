@@ -6,6 +6,7 @@ from models.authModels import Auth
 import random
 import bcrypt
 from helpers.helpers import *
+# from config.config import API_VERSION
 
 auth_bp = Blueprint('auth_bp', __name__)
 user_model = User()

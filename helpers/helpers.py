@@ -181,11 +181,10 @@ def send_otp_email(email):
     if os.path.exists('config/token.pickle'):
         with open('config/token.pickle', 'rb') as token:
             creds = pickle.load(token)
-
-    if creds.refresh_token:
-        creds.refresh(Request())
-        with open('config/token.pickle', 'wb') as token:
-            pickle.dump(creds, token)
+            if creds.refresh_token:
+                creds.refresh(Request())
+                with open('config/token.pickle', 'wb') as token:
+                    pickle.dump(creds, token)
     
     if not creds or not creds.valid:
         flow = InstalledAppFlow.from_client_secrets_file('config/credential.json', SCOPES)
