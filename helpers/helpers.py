@@ -70,7 +70,7 @@ def generate_otp(phone, type):
         else:
             return False
     elif(type == 'SMS'): 
-        response = requests.post(WA_ENGINE, data=data)
+        response = requests.post(WA_ENGINE + 'send-message-bot', data=data)
         if response.status_code == 200:
             data = response.json()
             if checkOtpPhone is None:

@@ -15,10 +15,6 @@ otp_model = Otp()
 auth_model = Auth()
 login_delimiter = ":"
 
-@auth_bp.route('/checkApiStatus', methods=['GET'])
-def checkStatus():
-    return jsonify({"status" : True}), 200
-
 @auth_bp.route('/mitraLoginByEmail', methods=['POST'])
 def mitraLoginByEmail():
     data = request.get_json()
@@ -179,8 +175,6 @@ def loginPinMitra():
         return jsonify({"status" : "success","message" : 'PIN cocok', "data" : UniqueID}), 200
     else:
         return jsonify({"status" : "failed","message": "Akses ditolak"}), 400
-
-    
 
 @auth_bp.route('/loginByEmail', methods=['POST'])
 def loginByEmail():

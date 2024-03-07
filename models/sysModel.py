@@ -27,3 +27,12 @@ class Sys:
         cur.execute(query, (counter,))
         conn.commit()
         cur.close()
+
+    def checkMaintenanceState(self):
+        conn = create_connection()
+        cur = conn.cursor()
+        query = "SELECT Value FROM {} WHERE Config = %s".format(self.SYSTAB)
+        cur.execute(query, ('Maintenance',))
+        users = cur.fetchall()
+        cur.close()
+        return users

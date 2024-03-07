@@ -4,7 +4,7 @@ import bcrypt
 import base64
 
 API_VERSION = "1.0.0"
-WA_ENGINE = "https://wa-engine.site:2053/send-message-bot"
+WA_ENGINE = "https://wa-engine.site:2053/"
 lokasi = 'Asia/Jakarta'
 zona_waktu = pytz.timezone(lokasi)
 
