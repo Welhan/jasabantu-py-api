@@ -6,6 +6,7 @@ from models.otpModels import Otp
 from models.authModels import Auth
 from models.mitraModels import Mitra
 from models.sysModel import Sys
+from routes.api_routes import checkWaStatus
 import random
 import bcrypt
 import requests
@@ -58,7 +59,10 @@ def generate_otp(phone, type):
     
     otp = bcrypt.hashpw(otp.encode('utf-8'), SALT_KEY)
     if(type == 'WA'):
-        response = requests.post(WA_ENGINE, data=data)
+        waStatus = checkWaStatus()
+        if waStatus is not None:
+            print(waStatus)
+        response = requests.post(WA_ENGINE + 'send-message-bot', data=data)
         if response.status_code == 200:
             data = response.json()
             

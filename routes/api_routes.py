@@ -20,4 +20,4 @@ def checkWaStatus():
     response = requests.post(url)
     if response.status_code == 200:
         return jsonify({"status" : True}), 200
-    return jsonify({"status" : False, "message": "Something went worng!"}), 202
+    return jsonify({"status" : False, "message": "Something went worng! Use Email as Alternative OTP"}), 202

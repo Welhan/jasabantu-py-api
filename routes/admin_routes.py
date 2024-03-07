@@ -3,6 +3,8 @@ from models.adminModels import Admin
 from helpers.helpers import *
 
 import bcrypt
+import base64
+import requests
 
 admin_model = Admin()
 
@@ -259,6 +261,15 @@ def newDecode():
     param = data.get('param')
     result = decode(param)
     return jsonify({"status":'failed','message': result}), 200
+
+@admin_bp.route('/test_base64', methods=['POST'])
+def test_base64():
+    data = request.get_json()
+    param = data.get('param')
+    result = base64.b64encode(param.encode()).decode()
+    return jsonify({"status":'success','message': result}), 200
+
+
 
     
 
